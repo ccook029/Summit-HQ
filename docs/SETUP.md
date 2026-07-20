@@ -46,6 +46,23 @@ To wire it:
    (`ZOHO_BOOKS_MCP_URL` + token). Tool access is controlled in the Zoho
    admin, so propose-only is enforced at the source.
 
+**Corporate structure / locations:** the Zoho Books organization belongs to
+the numbered corporation that owns both **Summit** (main location) and
+**True North Steelworks** (second location). `ZOHO_ORGANIZATION_ID` is the
+numbered corp's org. When the integration is linked, the finance feed should
+be filtered to the Summit location (Zoho Books supports per-location
+reporting via branches/locations) — to be wired with the owner. Until then
+the department context explicitly warns the finance team that snapshots may
+include True North activity.
+
+## 3b. Zoho Mail (later)
+
+Summit also runs email on Zoho. Once linked (Zoho Mail API, same OAuth
+console), the Ops Coordinator and Outreach Writer's drafted ```` ```email ````
+blocks can gain a one-click "send via Zoho Mail" executor — still owner-gated
+in /review. Not wired yet; discuss scopes before granting (send-only vs
+read).
+
 ## 4. Owner questions still open (blueprint §0)
 
 The infrastructure is complete, but three business facts are placeholders

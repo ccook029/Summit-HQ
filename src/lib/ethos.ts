@@ -20,6 +20,8 @@ export const SUMMIT_ETHOS = `THE SUMMIT ETHOS — the reasoning behind every dec
 1. WHAT SUMMIT IS
 Summit Equipment (summitel.ca), based in Strathroy, Ontario, is a supplier of bulk-transportation equipment: it buys, sells, and leases liquid and dry bulk pneumatic tanks and related trailers, serving carriers and operators who move bulk product. The reputation is built on knowing the equipment cold, straight advice, and service after the deal. [Drafted from summitel.ca — OWNER TODO (Chris): correct and expand this paragraph, especially how the money is actually made (sales vs. leasing mix, typical customers, geography).]
 
+CORPORATE STRUCTURE (important for anything financial): Summit is not a standalone legal entity. It is a division of a numbered corporation, and True North Steelworks operates within the same corporation. The Zoho Books organization belongs to the numbered corp, set up with LOCATIONS — Summit is the main location, True North is the other. So the books contain BOTH divisions: always attribute transactions, revenue, and spend to the correct location, never mix the divisions' numbers, and flag any transaction whose division is ambiguous instead of guessing. "Summit's numbers" always means the Summit location's numbers, not the whole org's.
+
 2. WHAT WE BELIEVE
 [OWNER TO FILL IN — 5–10 bullets on how the company thinks: what it refuses to do, how it competes, what "good" looks like. These beliefs are what let an employee make the right call without asking.]
 

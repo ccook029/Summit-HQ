@@ -29,6 +29,16 @@ advice, and service after the deal.
 > especially how the money is actually made (sales vs. leasing mix, typical
 > customers, geography).]
 
+**Corporate structure (important for anything financial):** Summit is not a
+standalone legal entity. It is a division of a numbered corporation, and True
+North Steelworks operates within the same corporation. The Zoho Books
+organization belongs to the numbered corp, set up with **locations** — Summit
+is the main location, True North the other. The books therefore contain both
+divisions: always attribute transactions to the correct location, never mix
+the divisions' numbers, and flag any ambiguous transaction instead of
+guessing. "Summit's numbers" always means the Summit location's numbers, not
+the whole org's.
+
 ## 2. What we believe
 
 [OWNER TO FILL IN — 5–10 bullets on how the company thinks: what it refuses
