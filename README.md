@@ -59,5 +59,6 @@ npm run lint   # tsc --noEmit
 npm run dev
 ```
 
-Deploy on Vercel with a KV store attached. `vercel.json` restricts builds to
-`main` on purpose.
+Deploy on Vercel with a KV store attached — **`main` is the production
+branch** (set it in Vercel → Settings → Git). `vercel.json` restricts builds
+to `main` and the setup branch on purpose.
