@@ -85,7 +85,7 @@ export default function Home() {
       {/* Leadership — the Owner */}
       <ScrollReveal>
         <SectionLabel>Leadership</SectionLabel>
-        <Stagger className="grid grid-cols-1 gap-5 mb-2">
+        <Stagger className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-2">
           {leadership.map((leader) => (
             <StaggerItem key={leader.name}>
               <div className="group rounded-xl border border-sky/30 hover:border-sky/50 p-6 bg-panel relative overflow-hidden">

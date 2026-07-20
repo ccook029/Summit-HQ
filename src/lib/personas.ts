@@ -41,9 +41,16 @@ export interface LeaderPersona {
 const leadership: LeaderPersona[] = [
   {
     name: "Chris Cook",
-    title: "Owner",
+    title: "Partner",
     avatarInitials: "CC",
     avatarColor: "bg-navy",
+    avatarAccent: "ring-sky",
+  },
+  {
+    name: "Brad",
+    title: "Partner",
+    avatarInitials: "B",
+    avatarColor: "bg-skydeep",
     avatarAccent: "ring-sky",
   },
 ];

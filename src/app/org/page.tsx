@@ -89,7 +89,7 @@ export default function OrgPage() {
           Leadership
         </p>
         <p className="mt-1 text-sm text-slate-800">
-          Chris Cook — Owner
+          Chris Cook · Brad — Partners
         </p>
       </div>
 

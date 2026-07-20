@@ -27,6 +27,14 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [answering, setAnswering] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [me, setMe] = useState<string>("Owner");
+
+  useEffect(() => {
+    fetch("/api/os/me")
+      .then((r) => r.json())
+      .then((d) => d?.staff?.name && setMe(d.staff.name))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -56,7 +64,7 @@ export default function QuestionsPage() {
           departmentId: esc.departmentId,
           escalationId: esc.id,
           answer: text,
-          answeredBy: "Chris Cook",
+          answeredBy: me,
         }),
       });
       await load();

@@ -2,8 +2,9 @@
 
 // ---------------------------------------------------------------------------
 // /login — the Summit HQ front door.
-// A single passcode goes to /api/os/login (OS_SHARED_PASSCODE). The session
-// model supports per-person staff logins later; today Summit is single-owner.
+// Email + password, verified against the OS_USERS directory (one entry per
+// partner). Falls back to the single shared passcode when OS_USERS isn't
+// configured yet.
 // ---------------------------------------------------------------------------
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,6 +13,7 @@ import { SummitLogo } from "@/components/logo";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
     params.get("error") === "sso" ? "Sign-in link expired — log in below." : null
@@ -26,7 +28,7 @@ function LoginForm() {
       const res = await fetch("/api/os/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
@@ -50,14 +52,27 @@ function LoginForm() {
           <SummitLogo className="h-24 w-auto" />
           <h1 className="sr-only">Summit Equipment HQ</h1>
           <p className="text-sm text-slate-500 text-center">
-            Owner sign-in — your AI staff is inside.
+            Partner sign-in — your AI staff is inside.
           </p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="block text-xs uppercase tracking-wider text-slate-500 mb-1">
-              Passcode
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+              className="w-full rounded-lg bg-paper border border-line px-3 py-2 text-sm focus:border-sky focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-slate-500 mb-1">
+              Password
             </label>
             <input
               type="password"

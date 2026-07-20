@@ -9,7 +9,8 @@
 | `CLAUDE_MANAGER_MODEL` | recommended | boss/review model; defaults to `claude-opus-4-8` |
 | `KV_*` (Vercel KV / Upstash) | **yes** | auto-added when you attach KV storage to the Vercel project. Give Summit its **own** KV database — don't share Tilt's. |
 | `SUMMIT_OS_SESSION_SECRET` | recommended | any long random string; turns on the login wall |
-| `OS_SHARED_PASSCODE` | recommended | the passcode you type at `/login` |
+| `OS_USERS` | recommended | per-partner logins: `Name\|email\|password; Name\|email\|password` (entries `;`-separated, fields `\|`-separated; keep entry order stable) |
+| `OS_SHARED_PASSCODE` | fallback | single shared passcode, used only when `OS_USERS` is unset |
 | `ZOHO_CLIENT_ID` / `ZOHO_CLIENT_SECRET` / `ZOHO_REFRESH_TOKEN` / `ZOHO_ORGANIZATION_ID` | for Finance | read-only Zoho Books feed (see §3) |
 | `ZOHO_DOMAIN` / `ZOHO_ACCOUNTS_URL` | optional | default to zohoapis.com / accounts.zoho.com — set to your Zoho data center if different (e.g. `.zoho.eu`) |
 | `ZOHO_BOOKS_MCP_URL` / `ZOHO_BOOKS_MCP_TOKEN` | optional | official Zoho Books MCP server; preferred over REST when set |
