@@ -18,7 +18,7 @@
 export const SUMMIT_ETHOS = `THE SUMMIT ETHOS — the reasoning behind every decision at Summit. This is not a mission statement. If you understand this, you can make a call the owner would agree with on a question no one anticipated. That is the point of it.
 
 1. WHAT SUMMIT IS
-[OWNER TO FILL IN — one paragraph: what Summit sells, to whom, and how it makes money. Until this is filled in, treat the business specifics as UNKNOWN: work strictly from the work-order brief and the company knowledge, and escalate rather than assume anything about products, pricing, customers, or positioning.]
+Summit Equipment (summitel.ca), based in Strathroy, Ontario, is a supplier of bulk-transportation equipment: it buys, sells, and leases liquid and dry bulk pneumatic tanks and related trailers, serving carriers and operators who move bulk product. The reputation is built on knowing the equipment cold, straight advice, and service after the deal. [Drafted from summitel.ca — OWNER TODO (Chris): correct and expand this paragraph, especially how the money is actually made (sales vs. leasing mix, typical customers, geography).]
 
 2. WHAT WE BELIEVE
 [OWNER TO FILL IN — 5–10 bullets on how the company thinks: what it refuses to do, how it competes, what "good" looks like. These beliefs are what let an employee make the right call without asking.]

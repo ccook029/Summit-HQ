@@ -136,7 +136,7 @@ export default function ReviewPage() {
           <h1 className="font-display text-3xl font-bold uppercase tracking-wide">
             Review
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-slate-500">
             Everything your departments have approved and are waiting on you to
             ship. Nothing publishes until you approve it.
           </p>
@@ -144,7 +144,7 @@ export default function ReviewPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
-            className="rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-2 text-xs font-medium text-gray-300 transition-colors hover:bg-gray-700"
+            className="rounded-lg border border-line bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
           >
             ← Dashboard
           </Link>
@@ -152,15 +152,15 @@ export default function ReviewPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-slate-500">Loading…</p>
       ) : (
         <>
           <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
               Ready to ship — {approved.length}
             </h2>
             {approved.length === 0 ? (
-              <div className="rounded-xl border border-gray-800/60 bg-[#111]/40 p-6 text-sm text-gray-400">
+              <div className="rounded-xl border border-line bg-panel p-6 text-sm text-slate-500">
                 Nothing waiting. As your teams finish work and their bosses
                 approve it, it lands here for your final sign-off.
               </div>
@@ -182,10 +182,10 @@ export default function ReviewPage() {
 
           {erroredOrders.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-red-400">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-red-600">
                 Ran into a problem — {erroredOrders.length}
               </h2>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-slate-400">
                 These pieces hit an error mid-run (usually the AI service was
                 briefly busy). Retry runs the piece again from the top; it does
                 not re-plan.
@@ -205,11 +205,11 @@ export default function ReviewPage() {
           )}
 
           <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-600">
               Needs your decision — {escalations.length}
             </h2>
             {escalations.length === 0 ? (
-              <div className="rounded-xl border border-gray-800/60 bg-[#111]/40 p-6 text-sm text-gray-400">
+              <div className="rounded-xl border border-line bg-panel p-6 text-sm text-slate-500">
                 No open questions across any department.
               </div>
             ) : (
@@ -226,10 +226,10 @@ export default function ReviewPage() {
 
           {escalatedOrders.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Escalated work orders — {escalatedOrders.length}
               </h2>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-slate-400">
                 These are blocked on a question above. Answer the question, then
                 send the work order back so the team can finish it.
               </p>
@@ -338,51 +338,51 @@ function WorkOrderCard({
   const preview = contentPreview(order);
 
   return (
-    <div className="space-y-3 rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
+    <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-100">{order.title}</p>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <p className="text-sm font-medium text-slate-900">{order.title}</p>
+          <p className="mt-0.5 text-xs text-slate-500">
             {dept?.name ?? order.departmentId} · {who?.name ?? order.assigneeId} ·{" "}
             {order.deliverableType}
           </p>
         </div>
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="shrink-0 text-xs text-gray-500 hover:text-gray-300"
+          className="shrink-0 text-xs text-slate-500 hover:text-slate-700"
         >
           {expanded ? "hide" : "view full"}
         </button>
       </div>
 
       {preview && (
-        <p className="text-xs leading-relaxed text-gray-300">
-          <span className="font-semibold text-gray-500">What it is: </span>
+        <p className="text-xs leading-relaxed text-slate-700">
+          <span className="font-semibold text-slate-500">What it is: </span>
           {preview}
           {preview.length >= 240 ? "…" : ""}
         </p>
       )}
 
       {expanded && (
-        <div className="space-y-3 rounded-lg border border-gray-800/60 bg-black/30 p-3">
+        <div className="space-y-3 rounded-lg border border-line bg-slate-50 p-3">
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               Brief
             </p>
-            <p className="whitespace-pre-wrap text-xs text-gray-400">{order.brief}</p>
+            <p className="whitespace-pre-wrap text-xs text-slate-500">{order.brief}</p>
           </div>
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               Deliverable
             </p>
-            <p className="whitespace-pre-wrap text-xs text-gray-300">{draft}</p>
+            <p className="whitespace-pre-wrap text-xs text-slate-700">{draft}</p>
           </div>
           {review && (
             <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[#2dd4bf]">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-skydeep">
                 Boss review
               </p>
-              <p className="whitespace-pre-wrap text-xs text-gray-400">{review}</p>
+              <p className="whitespace-pre-wrap text-xs text-slate-500">{review}</p>
             </div>
           )}
         </div>
@@ -393,7 +393,7 @@ function WorkOrderCard({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional note / what to change…"
-          className="min-w-[12rem] flex-1 rounded-md border border-gray-700 bg-gray-800/50 px-2 py-1.5 text-xs text-gray-200 focus:border-emerald-500 focus:outline-none"
+          className="min-w-[12rem] flex-1 rounded-md border border-line bg-slate-100 px-2 py-1.5 text-xs text-slate-800 focus:border-emerald-500 focus:outline-none"
           disabled={busy}
         />
         {onShip && (
@@ -410,7 +410,7 @@ function WorkOrderCard({
             onClick={() => notes.trim() && onSendBack(notes.trim())}
             disabled={busy || !notes.trim()}
             title={!notes.trim() ? "Add a note so the team knows what to change" : ""}
-            className="rounded-md border border-amber-700/60 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-600/20 disabled:opacity-40"
+            className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-40"
           >
             Send back
           </button>
@@ -419,7 +419,7 @@ function WorkOrderCard({
           <button
             onClick={() => onReject(notes.trim() || undefined)}
             disabled={busy}
-            className="rounded-md border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:border-red-700 hover:text-red-300 disabled:opacity-40"
+            className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:border-red-700 hover:text-red-700 disabled:opacity-40"
           >
             Reject
           </button>
@@ -447,20 +447,20 @@ function ErroredOrderCard({
   const who = employees[order.assigneeId];
   const dept = departments[order.departmentId];
   return (
-    <div className="space-y-3 rounded-xl border border-red-900/40 bg-red-950/10 p-4">
+    <div className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
       <div>
-        <p className="text-sm font-medium text-gray-100">{order.title}</p>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <p className="text-sm font-medium text-slate-900">{order.title}</p>
+        <p className="mt-0.5 text-xs text-slate-500">
           {dept?.name ?? order.departmentId} · {who?.name ?? order.assigneeId} ·{" "}
           {order.deliverableType}
         </p>
       </div>
       {order.error && (
-        <div className="rounded-lg border border-red-900/40 bg-black/40 p-3">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-red-400">
+        <div className="rounded-lg border border-red-200 bg-white p-3">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-red-600">
             Error
           </p>
-          <p className="whitespace-pre-wrap break-words font-mono text-[11px] text-red-200/80">
+          <p className="whitespace-pre-wrap break-words font-mono text-[11px] text-red-800/80">
             {order.error}
           </p>
         </div>
@@ -469,14 +469,14 @@ function ErroredOrderCard({
         <button
           onClick={onRetry}
           disabled={busy}
-          className="rounded-md bg-[#0f766e] px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#00a8d1] disabled:opacity-40"
+          className="rounded-md bg-navy px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-40"
         >
           {busy ? "Retrying…" : "Retry"}
         </button>
         <button
           onClick={onReject}
           disabled={busy}
-          className="rounded-md border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:border-red-700 hover:text-red-300 disabled:opacity-40"
+          className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:border-red-700 hover:text-red-700 disabled:opacity-40"
         >
           Reject
         </button>
@@ -496,14 +496,14 @@ function EscalationCard({
 }) {
   const [val, setVal] = useState(esc.recommendation ?? "");
   return (
-    <div className="space-y-3 rounded-xl border border-amber-800/40 bg-amber-950/10 p-4">
-      <p className="text-sm text-gray-200">{esc.question}</p>
-      <p className="text-xs text-gray-500">
+    <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm text-slate-800">{esc.question}</p>
+      <p className="text-xs text-slate-500">
         {esc.departmentName ?? esc.departmentId} · {esc.reason} · raised{" "}
         {esc.raisedAt.slice(0, 10)}
       </p>
       {esc.recommendation && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-slate-500">
           Recommendation: {esc.recommendation}
         </p>
       )}
@@ -513,7 +513,7 @@ function EscalationCard({
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onAnswer(val)}
           placeholder="Your decision…"
-          className="flex-1 rounded-md border border-gray-700 bg-gray-800/50 px-3 py-2 text-sm text-gray-200 focus:border-amber-500 focus:outline-none"
+          className="flex-1 rounded-md border border-line bg-slate-100 px-3 py-2 text-sm text-slate-800 focus:border-amber-500 focus:outline-none"
           disabled={busy}
         />
         <button

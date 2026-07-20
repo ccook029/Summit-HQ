@@ -51,8 +51,9 @@ To wire it:
 The infrastructure is complete, but three business facts are placeholders
 until Chris fills them in:
 
-1. **What Summit is** — one paragraph (what it sells, to whom, how it makes
-   money) + 5–10 belief bullets → `docs/ETHOS.md` §1–2, mirrored into
+1. **What Summit is** — §1 now carries a draft from summitel.ca (bulk
+   pneumatic tank sales/leasing, Strathroy ON). Correct and expand it, and add
+   the 5–10 belief bullets in §2 → `docs/ETHOS.md`, mirrored into
    `src/lib/ethos.ts`. This is the highest-leverage edit in the repo.
 2. **The ideal-customer profile** — what a *lead* is and what makes one
    *qualified* → add to the `/knowledge` screen (Company Knowledge). BD is

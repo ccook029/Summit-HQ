@@ -69,7 +69,7 @@ export default function DepartmentsMenu() {
       <button
         ref={btnRef}
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-300"
+        className="flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-700"
         aria-expanded={open}
         aria-haspopup="menu"
       >
@@ -89,30 +89,30 @@ export default function DepartmentsMenu() {
         <div
           role="menu"
           style={style}
-          className="z-[60] rounded-xl border border-gray-800 bg-[#101010]/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-md"
+          className="z-[60] rounded-xl border border-line bg-panel/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-md"
         >
           <Link
             href="/org"
-            className="block rounded-lg px-3 py-2 transition-colors hover:bg-gray-900"
+            className="block rounded-lg px-3 py-2 transition-colors hover:bg-slate-50"
           >
-            <span className="text-sm font-medium text-gray-200">
+            <span className="text-sm font-medium text-slate-800">
               Full Org Chart
             </span>
-            <span className="block text-xs text-gray-500">
+            <span className="block text-xs text-slate-500">
               Everyone, who they report to, and department controls
             </span>
           </Link>
           {departments.map((d) => (
             <div key={d.id}>
-              <div className="my-1 border-t border-gray-800/70" />
+              <div className="my-1 border-t border-line/70" />
               <Link
                 href={`/org#${d.id}`}
-                className="block rounded-lg px-3 py-2 transition-colors hover:bg-gray-900"
+                className="block rounded-lg px-3 py-2 transition-colors hover:bg-slate-50"
               >
-                <span className="text-sm font-semibold text-[#2dd4bf]">
+                <span className="text-sm font-semibold text-skydeep">
                   {d.name}
                 </span>
-                <span className="block text-xs text-gray-500">{d.lead}</span>
+                <span className="block text-xs text-slate-500">{d.lead}</span>
               </Link>
               {d.tools.map((t) =>
                 t.external ? (
@@ -121,10 +121,10 @@ export default function DepartmentsMenu() {
                     href={t.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="block rounded-lg px-3 py-1.5 pl-6 transition-colors hover:bg-gray-900"
+                    className="block rounded-lg px-3 py-1.5 pl-6 transition-colors hover:bg-slate-50"
                   >
-                    <span className="text-[13px] text-gray-300">{t.label} ↗</span>
-                    <span className="block text-[11px] text-gray-600">
+                    <span className="text-[13px] text-slate-700">{t.label} ↗</span>
+                    <span className="block text-[11px] text-slate-400">
                       {t.description}
                     </span>
                   </a>
@@ -132,10 +132,10 @@ export default function DepartmentsMenu() {
                   <Link
                     key={t.href}
                     href={t.href}
-                    className="block rounded-lg px-3 py-1.5 pl-6 transition-colors hover:bg-gray-900"
+                    className="block rounded-lg px-3 py-1.5 pl-6 transition-colors hover:bg-slate-50"
                   >
-                    <span className="text-[13px] text-gray-300">{t.label}</span>
-                    <span className="block text-[11px] text-gray-600">
+                    <span className="text-[13px] text-slate-700">{t.label}</span>
+                    <span className="block text-[11px] text-slate-400">
                       {t.description}
                     </span>
                   </Link>

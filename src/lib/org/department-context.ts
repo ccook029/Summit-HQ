@@ -81,7 +81,7 @@ async function renderBizdevContext(): Promise<string> {
     "",
     "",
     "=== PROSPECTING SCOPE ===",
-    "Summit's ideal-customer profile lives in the company knowledge (the owner maintains it on the /knowledge screen). Judge every prospect against it. If the ICP or target segments haven't been defined there yet, raise a decision request asking the owner to define them — do not assume what Summit sells or to whom.",
+    "Summit Equipment buys, sells, and leases liquid and dry bulk pneumatic tanks (Strathroy, Ontario). Prospects are therefore typically bulk carriers, tanker fleet operators, and businesses that haul liquid or dry bulk product. The precise ideal-customer profile lives in the company knowledge (/knowledge screen) — judge every prospect against it, and if the ICP or target segments haven't been defined there yet, raise a decision request asking the owner to define them rather than assuming.",
     "=== END SCOPE ===",
     "",
     signals,

@@ -21,13 +21,13 @@ export default function PageHeader({
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-xs uppercase tracking-widest text-gray-600">{eyebrow}</p>
+          <p className="text-xs uppercase tracking-widest text-slate-400">{eyebrow}</p>
         )}
-        <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-gray-100">
+        <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-slate-900">
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">{subtitle}</p>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">{subtitle}</p>
         )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -23,13 +23,13 @@ export default function OwnerNav() {
     <>
       <Link
         href="/review"
-        className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >
         Review
       </Link>
       <Link
         href="/questions"
-        className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >
         Questions
       </Link>

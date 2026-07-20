@@ -39,11 +39,11 @@ export function CommandButton() {
   return (
     <button
       onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}
-      className="hidden sm:flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-700 rounded-md px-2.5 py-1.5 transition-colors"
+      className="hidden sm:flex items-center gap-2 text-xs text-slate-500 hover:text-slate-700 border border-line hover:border-line rounded-md px-2.5 py-1.5 transition-colors"
       aria-label="Open command palette"
     >
       <span>Search…</span>
-      <kbd className="font-sans text-[10px] bg-gray-800/80 rounded px-1 py-0.5 text-gray-400">
+      <kbd className="font-sans text-[10px] bg-slate-100/80 rounded px-1 py-0.5 text-slate-500">
         ⌘K
       </kbd>
     </button>
@@ -220,7 +220,7 @@ export function CommandPalette() {
           transition={{ duration: 0.18 }}
         >
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
             onClick={close}
           />
           <motion.div
@@ -228,11 +228,11 @@ export function CommandPalette() {
             animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -14, scale: 0.98 }}
             transition={{ duration: 0.2, ease: EASE_OUT }}
-            className="relative w-full max-w-xl overflow-hidden rounded-xl border border-gray-800 bg-[#141414]/95 shadow-2xl"
+            className="relative w-full max-w-xl overflow-hidden rounded-xl border border-line bg-panel/95 shadow-2xl"
             onKeyDown={onKeyDown}
           >
-            <div className="flex items-center gap-2 border-b border-gray-800 px-4">
-              <span className="text-gray-600">
+            <div className="flex items-center gap-2 border-b border-line px-4">
+              <span className="text-slate-400">
                 <SearchIcon />
               </span>
               <input
@@ -240,16 +240,16 @@ export function CommandPalette() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search agents, actions, pages…"
-                className="flex-1 bg-transparent py-3.5 text-sm text-gray-200 placeholder:text-gray-600 outline-none"
+                className="flex-1 bg-transparent py-3.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none"
               />
-              <kbd className="rounded border border-gray-700 px-1.5 py-0.5 text-[10px] text-gray-500">
+              <kbd className="rounded border border-line px-1.5 py-0.5 text-[10px] text-slate-500">
                 Esc
               </kbd>
             </div>
 
             <div className="max-h-80 overflow-y-auto chat-scroll py-2">
               {filtered.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-gray-600">
+                <p className="px-4 py-8 text-center text-sm text-slate-400">
                   No matches
                 </p>
               ) : (
@@ -259,24 +259,24 @@ export function CommandPalette() {
                     onMouseEnter={() => setActive(i)}
                     onClick={() => run(c)}
                     className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors ${
-                      i === active ? "bg-[#2dd4bf]/15" : "hover:bg-white/5"
+                      i === active ? "bg-sky/15" : "hover:bg-slate-50"
                     }`}
                   >
                     <span className="min-w-0">
                       <span
                         className={`block truncate text-sm ${
-                          i === active ? "text-white" : "text-gray-300"
+                          i === active ? "text-navy" : "text-slate-700"
                         }`}
                       >
                         {c.label}
                       </span>
                       {c.hint && (
-                        <span className="block truncate text-xs text-gray-600">
+                        <span className="block truncate text-xs text-slate-400">
                           {c.hint}
                         </span>
                       )}
                     </span>
-                    <span className="shrink-0 text-[10px] uppercase tracking-wider text-gray-600">
+                    <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
                       {c.group}
                     </span>
                   </button>

@@ -83,17 +83,17 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="text-gray-500 hover:text-[#2dd4bf] transition-colors"
+            className="text-slate-500 hover:text-skydeep transition-colors"
           >
             &larr; HQ
           </Link>
           <h2 className="font-display text-3xl font-bold uppercase tracking-wide">
-            Operations <span className="text-[#2dd4bf]">Overview</span>
+            Operations <span className="text-skydeep">Overview</span>
           </h2>
         </div>
         <Link
           href="/review"
-          className="px-4 py-2 bg-[#2dd4bf] hover:bg-[#5eead4] text-[#06232b] rounded-lg text-sm font-semibold transition-colors"
+          className="px-4 py-2 bg-navy hover:bg-navy-deep text-white rounded-lg text-sm font-semibold transition-colors"
         >
           Open Review Queue
         </Link>
@@ -114,10 +114,10 @@ export default function DashboardPage() {
       {/* The people themselves live on the org chart */}
       <Link
         href="/org"
-        className="lift block rounded-lg border border-gray-800/60 p-5 hover:border-[#2dd4bf]/30 bg-[#111]/30"
+        className="lift block rounded-lg border border-line p-5 hover:border-sky/50 bg-panel/80"
       >
         <h3 className="font-semibold mb-1">Looking for the team?</h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-slate-500">
           Every employee lives on the org chart — click anyone to assign work,
           see their history, or open their chat console.
         </p>

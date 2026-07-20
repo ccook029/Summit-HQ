@@ -69,7 +69,7 @@ export default function OrgPage() {
           <h1 className="font-display text-3xl font-bold uppercase tracking-wide">
             Org Chart
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-slate-500">
             Every department, its boss, and who reports to whom. Dispatch a
             team, assign work directly, and graduate a department when its
             boss has earned auto-ship.
@@ -77,24 +77,24 @@ export default function OrgPage() {
         </div>
         <Link
           href="/review"
-          className="rounded-lg border border-emerald-800/60 bg-emerald-900/20 px-3 py-2 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-900/40"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
         >
           Review queue →
         </Link>
       </div>
 
       {/* Leadership root */}
-      <div className="rounded-xl border border-[#0f766e]/40 bg-[#0f766e]/10 p-4 text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[#2dd4bf]">
+      <div className="rounded-xl border border-sky/40 bg-sky/10 p-4 text-center">
+        <p className="text-xs font-semibold uppercase tracking-wider text-skydeep">
           Leadership
         </p>
-        <p className="mt-1 text-sm text-gray-200">
+        <p className="mt-1 text-sm text-slate-800">
           Chris Cook — Owner
         </p>
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-slate-500">Loading…</p>
       ) : (
         <div className="space-y-6">
           {departments.map((dept) => {
@@ -111,14 +111,14 @@ export default function OrgPage() {
               <div
                 key={dept.id}
                 id={dept.id}
-                className="scroll-mt-24 rounded-xl border border-gray-800/60 bg-[#111]/40 p-5"
+                className="scroll-mt-24 rounded-xl border border-line bg-panel p-5"
               >
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="font-display text-lg font-bold uppercase tracking-wide text-gray-100">
+                    <h2 className="font-display text-lg font-bold uppercase tracking-wide text-slate-900">
                       {dept.name}
                     </h2>
-                    <p className="mt-1 text-xs text-gray-500">{dept.mission}</p>
+                    <p className="mt-1 text-xs text-slate-500">{dept.mission}</p>
                   </div>
                   {boss?.staffed && hasStaffedReports && (
                     <DeptControls
@@ -135,13 +135,13 @@ export default function OrgPage() {
                     <PersonRow employee={boss} isBoss />
                   </div>
                 ) : (
-                  <p className="mb-3 text-xs text-gray-600">
+                  <p className="mb-3 text-xs text-slate-400">
                     Reports directly to leadership (no department manager).
                   </p>
                 )}
 
                 {members.length > 0 && (
-                  <div className="space-y-1.5 border-l border-gray-800 pl-4">
+                  <div className="space-y-1.5 border-l border-line pl-4">
                     {members.map((e) => (
                       <PersonRow key={e.id} employee={e} />
                     ))}
@@ -149,8 +149,8 @@ export default function OrgPage() {
                 )}
 
                 {(dept.tools?.length ?? 0) > 0 && (
-                  <div className="mt-4 border-t border-gray-800/60 pt-3">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+                  <div className="mt-4 border-t border-line pt-3">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                       Tools & workspaces
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -162,7 +162,7 @@ export default function OrgPage() {
                             target="_blank"
                             rel="noreferrer"
                             title={t.description}
-                            className="rounded-full border border-gray-700 bg-gray-800/40 px-3 py-1 text-[11px] text-gray-300 transition-colors hover:border-[#2dd4bf]/50 hover:text-[#2dd4bf]"
+                            className="rounded-full border border-line bg-slate-100 px-3 py-1 text-[11px] text-slate-700 transition-colors hover:border-sky/60 hover:text-skydeep"
                           >
                             {t.label} ↗
                           </a>
@@ -171,7 +171,7 @@ export default function OrgPage() {
                             key={t.href}
                             href={t.href}
                             title={t.description}
-                            className="rounded-full border border-gray-700 bg-gray-800/40 px-3 py-1 text-[11px] text-gray-300 transition-colors hover:border-[#2dd4bf]/50 hover:text-[#2dd4bf]"
+                            className="rounded-full border border-line bg-slate-100 px-3 py-1 text-[11px] text-slate-700 transition-colors hover:border-sky/60 hover:text-skydeep"
                           >
                             {t.label}
                           </Link>
@@ -266,7 +266,7 @@ function DeptControls({
         <button
           onClick={dispatch}
           disabled={busy !== null}
-          className="rounded-md bg-[#0f766e] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-[#00a8d1] disabled:opacity-50"
+          className="rounded-md bg-navy px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-50"
         >
           {busy === "dispatch" ? `${bossName} is working…` : "Dispatch team"}
         </button>
@@ -280,14 +280,14 @@ function DeptControls({
           }
           className={`rounded-md border px-3 py-1.5 text-[11px] font-medium transition-colors disabled:opacity-50 ${
             autoShip
-              ? "border-emerald-700/60 bg-emerald-900/30 text-emerald-300"
-              : "border-gray-700 text-gray-400 hover:border-gray-500"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-line text-slate-500 hover:border-slate-300"
           }`}
         >
           {autoShip ? "Graduated ✓" : "Owner gate on"}
         </button>
       </div>
-      {note && <p className="max-w-[16rem] text-right text-[10px] text-gray-500">{note}</p>}
+      {note && <p className="max-w-[16rem] text-right text-[10px] text-slate-500">{note}</p>}
     </div>
   );
 }
@@ -338,11 +338,11 @@ function AssignWorkForm({ members }: { members: Employee[] }) {
   };
 
   return (
-    <div className="mt-4 border-t border-gray-800/60 pt-3">
+    <div className="mt-4 border-t border-line pt-3">
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          className="text-[11px] font-medium text-[#2dd4bf] hover:underline"
+          className="text-[11px] font-medium text-skydeep hover:underline"
         >
           + Assign work to this team
         </button>
@@ -352,7 +352,7 @@ function AssignWorkForm({ members }: { members: Employee[] }) {
             <select
               value={assignee}
               onChange={(e) => setAssignee(e.target.value)}
-              className="rounded-md border border-gray-700 bg-gray-800/50 px-2 py-1.5 text-xs text-gray-200 focus:border-[#2dd4bf] focus:outline-none"
+              className="rounded-md border border-line bg-slate-100 px-2 py-1.5 text-xs text-slate-800 focus:border-sky focus:outline-none"
               disabled={busy}
             >
               <option value="">Who does it?</option>
@@ -366,7 +366,7 @@ function AssignWorkForm({ members }: { members: Employee[] }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title (optional)"
-              className="min-w-[14rem] flex-1 rounded-md border border-gray-700 bg-gray-800/50 px-2 py-1.5 text-xs text-gray-200 focus:border-[#2dd4bf] focus:outline-none"
+              className="min-w-[14rem] flex-1 rounded-md border border-line bg-slate-100 px-2 py-1.5 text-xs text-slate-800 focus:border-sky focus:outline-none"
               disabled={busy}
             />
           </div>
@@ -375,25 +375,25 @@ function AssignWorkForm({ members }: { members: Employee[] }) {
             onChange={(e) => setBrief(e.target.value)}
             placeholder="The brief — what you want, in your words. Their boss reviews it before it comes back to you."
             rows={2}
-            className="w-full rounded-md border border-gray-700 bg-gray-800/50 px-2 py-1.5 text-xs text-gray-200 focus:border-[#2dd4bf] focus:outline-none"
+            className="w-full rounded-md border border-line bg-slate-100 px-2 py-1.5 text-xs text-slate-800 focus:border-sky focus:outline-none"
             disabled={busy}
           />
           <div className="flex items-center gap-2">
             <button
               onClick={submit}
               disabled={busy || !assignee || !brief.trim()}
-              className="rounded-md bg-[#0f766e] px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#00a8d1] disabled:opacity-40"
+              className="rounded-md bg-navy px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-40"
             >
               {busy ? "Working (takes a minute)…" : "Create & run"}
             </button>
             <button
               onClick={() => setOpen(false)}
               disabled={busy}
-              className="text-[11px] text-gray-500 hover:text-gray-300"
+              className="text-[11px] text-slate-500 hover:text-slate-700"
             >
               cancel
             </button>
-            {note && <span className="text-[11px] text-gray-500">{note}</span>}
+            {note && <span className="text-[11px] text-slate-500">{note}</span>}
           </div>
         </div>
       )}
@@ -412,7 +412,7 @@ function PersonRow({
     <div className="flex items-center gap-3">
       <div
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-          isBoss ? "bg-[#0f766e] text-white" : "bg-gray-800 text-gray-300"
+          isBoss ? "bg-navy text-white" : "bg-slate-100 text-slate-700"
         }`}
       >
         {employee.name
@@ -422,18 +422,18 @@ function PersonRow({
           .slice(0, 2)}
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm text-gray-200">
+        <p className="truncate text-sm text-slate-800">
           {employee.name}
           {isBoss && (
-            <span className="ml-2 rounded-full bg-[#0f766e]/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#2dd4bf]">
+            <span className="ml-2 rounded-full bg-sky/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-skydeep">
               Boss
             </span>
           )}
         </p>
-        <p className="truncate text-xs text-gray-500">{employee.title}</p>
+        <p className="truncate text-xs text-slate-500">{employee.title}</p>
       </div>
       {!employee.staffed && (
-        <span className="ml-auto shrink-0 rounded-full border border-gray-700 px-2 py-0.5 text-[10px] text-gray-500">
+        <span className="ml-auto shrink-0 rounded-full border border-line px-2 py-0.5 text-[10px] text-slate-500">
           not staffed yet
         </span>
       )}
@@ -443,7 +443,7 @@ function PersonRow({
   return (
     <Link
       href={`/org/${employee.id}`}
-      className="block rounded-lg transition-colors hover:bg-gray-900/50"
+      className="block rounded-lg transition-colors hover:bg-slate-50"
     >
       {row}
     </Link>

@@ -173,16 +173,16 @@ function AssignCard({ spec }: { spec: AssignSpec }) {
   };
 
   return (
-    <div className="my-2 rounded-xl border border-[#0f766e]/40 bg-[#0f766e]/10 p-3.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2dd4bf]">
+    <div className="my-2 rounded-xl border border-sky/40 bg-sky/10 p-3.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-skydeep">
         Work order → {employee?.name ?? spec.assignee}
-        {employee && <span className="ml-1 font-normal normal-case text-gray-500">({employee.title})</span>}
+        {employee && <span className="ml-1 font-normal normal-case text-slate-500">({employee.title})</span>}
       </p>
-      <p className="mt-1 text-sm font-medium text-gray-100">{spec.title}</p>
-      <p className="mt-1 text-xs leading-relaxed text-gray-400">{spec.brief}</p>
+      <p className="mt-1 text-sm font-medium text-slate-900">{spec.title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-500">{spec.brief}</p>
       <div className="mt-2.5 flex items-center gap-2">
         {state === "done" ? (
-          <Link href="/review" className="text-xs font-semibold text-emerald-400 hover:underline">
+          <Link href="/review" className="text-xs font-semibold text-emerald-600 hover:underline">
             ✓ {note} Open Review queue →
           </Link>
         ) : (
@@ -190,11 +190,11 @@ function AssignCard({ spec }: { spec: AssignSpec }) {
             <button
               onClick={run}
               disabled={state === "busy"}
-              className="rounded-md bg-[#0f766e] px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#00a8d1] disabled:opacity-50"
+              className="rounded-md bg-navy px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-50"
             >
               {state === "busy" ? "Working (takes a minute)…" : "Assign & run"}
             </button>
-            {note && <span className="text-[11px] text-red-400">{note}</span>}
+            {note && <span className="text-[11px] text-red-600">{note}</span>}
           </>
         )}
       </div>
@@ -403,21 +403,21 @@ export default function GenericAgentChat({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-800/80 bg-[#101010]/80">
-      <div className="flex items-center justify-between border-b border-gray-800/70 px-4 py-2.5">
-        <span className="text-sm font-medium text-gray-300">Talk to {name}</span>
+    <div className="rounded-2xl border border-line bg-panel/95">
+      <div className="flex items-center justify-between border-b border-line/70 px-4 py-2.5">
+        <span className="text-sm font-medium text-slate-700">Talk to {name}</span>
         <div className="flex items-center gap-3">
           {speaking && (
             <button
               onClick={stopSpeaking}
-              className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+              className="text-xs text-amber-600 hover:text-amber-700 transition-colors"
             >
               ◼ Stop
             </button>
           )}
           <button
             onClick={clear}
-            className="text-xs text-gray-600 hover:text-gray-300 transition-colors"
+            className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
           >
             Clear
           </button>
@@ -428,7 +428,7 @@ export default function GenericAgentChat({
         {messages.map((m, i) =>
           m.role === "user" ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-[#2dd4bf]/15 border border-cyan-900/50 px-3.5 py-2 text-sm text-gray-100">
+              <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-sky/15 border border-cyan-900/50 px-3.5 py-2 text-sm text-slate-900">
                 {m.images && m.images.length > 0 && (
                   <div className="mb-1.5 flex flex-wrap gap-1.5">
                     {m.images.map((src, j) => (
@@ -459,8 +459,8 @@ export default function GenericAgentChat({
                 aria-label={speechFor === i && speaking ? "Stop" : "Read this reply out loud"}
                 className={`mt-1.5 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] transition-colors ${
                   speechFor === i && speaking
-                    ? "border-amber-700/60 bg-amber-950/40 text-amber-400 hover:text-amber-300"
-                    : "border-gray-800 bg-gray-900/60 text-gray-400 hover:border-[#2dd4bf]/50 hover:text-[#2dd4bf]"
+                    ? "border-amber-300 bg-amber-50 text-amber-700 hover:text-amber-800"
+                    : "border-line bg-slate-50 text-slate-500 hover:border-sky/60 hover:text-skydeep"
                 }`}
               >
                 {speechFor === i && speaking ? "◼ Stop" : "▶ Listen"}
@@ -468,11 +468,11 @@ export default function GenericAgentChat({
             </div>
           )
         )}
-        {loading && <p className="text-xs text-gray-600">{name} is thinking…</p>}
+        {loading && <p className="text-xs text-slate-400">{name} is thinking…</p>}
       </div>
 
       <div
-        className="border-t border-gray-800/70 p-3"
+        className="border-t border-line/70 p-3"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -484,11 +484,11 @@ export default function GenericAgentChat({
             {attachments.map((a, i) => (
               <div key={i} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.preview} alt="attachment" className="h-14 rounded-md border border-gray-700" />
+                <img src={a.preview} alt="attachment" className="h-14 rounded-md border border-line" />
                 <button
                   onClick={() => setAttachments((arr) => arr.filter((_, j) => j !== i))}
                   aria-label="Remove screenshot"
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-800 text-[10px] text-gray-300 ring-1 ring-gray-600 hover:bg-red-900 hover:text-white"
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-700 ring-1 ring-slate-300 hover:bg-red-600 hover:text-white"
                 >
                   ✕
                 </button>
@@ -513,7 +513,7 @@ export default function GenericAgentChat({
             disabled={loading || attachments.length >= MAX_ATTACHMENTS}
             title="Attach a screenshot (or paste / drop one)"
             aria-label="Attach a screenshot"
-            className="rounded-lg border border-gray-800 bg-[#0a0a0a] px-2.5 text-sm text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-200 disabled:opacity-40"
+            className="rounded-lg border border-line bg-paper px-2.5 text-sm text-slate-500 transition-colors hover:border-sky/50 hover:text-slate-800 disabled:opacity-40"
           >
             📎
           </button>
@@ -524,12 +524,12 @@ export default function GenericAgentChat({
             onPaste={onPaste}
             placeholder={placeholder ?? `Ask ${name} something…`}
             disabled={loading}
-            className="flex-1 rounded-lg border border-gray-800 bg-[#0a0a0a] px-3 py-2 text-sm text-gray-200 focus:border-[#2dd4bf] focus:outline-none"
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm text-slate-800 focus:border-sky focus:outline-none"
           />
           <button
             onClick={send}
             disabled={loading || (!input.trim() && attachments.length === 0)}
-            className="rounded-lg bg-[#2dd4bf] px-4 py-2 text-sm font-semibold text-black hover:bg-[#5eead4] transition-colors disabled:opacity-40"
+            className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-deep transition-colors disabled:opacity-40"
           >
             Send
           </button>

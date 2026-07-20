@@ -38,10 +38,10 @@ function MemberCard({ m, compact }: { m: MemberView; compact?: boolean }) {
   return (
     <Link href={m.href} className="block h-full">
       <div
-        className={`group h-full rounded-xl border bg-[#111]/50 transition-[background-color,border-color,box-shadow] duration-300 hover:bg-[#111]/80 hover:shadow-[0_12px_36px_-14px_rgba(0,214,255,0.4)] ${
+        className={`group h-full rounded-xl border bg-panel transition-[background-color,border-color,box-shadow] duration-300 hover:bg-sky/10 hover:shadow-[0_12px_36px_-14px_rgba(0,214,255,0.4)] ${
           m.isBoss
-            ? "border-[#2dd4bf]/40 hover:border-[#2dd4bf]/70"
-            : "border-gray-800/60 hover:border-[#2dd4bf]/40"
+            ? "border-sky/40 hover:border-sky/70"
+            : "border-line hover:border-sky/50"
         } ${compact ? "p-4" : "p-5"}`}
       >
         <div className="flex items-center gap-3">
@@ -51,19 +51,19 @@ function MemberCard({ m, compact }: { m: MemberView; compact?: boolean }) {
             {m.initials}
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 truncate font-semibold text-white transition-colors group-hover:text-[#2dd4bf]">
+            <p className="flex items-center gap-2 truncate font-semibold text-slate-900 transition-colors group-hover:text-skydeep">
               {m.name}
               {m.isBoss && (
-                <span className="rounded-full bg-[#0f766e]/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#2dd4bf]">
+                <span className="rounded-full bg-navy/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-skydeep">
                   Boss
                 </span>
               )}
             </p>
-            <p className="truncate text-xs text-gray-500">{m.title}</p>
+            <p className="truncate text-xs text-slate-500">{m.title}</p>
           </div>
         </div>
         {!compact && (
-          <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-500">
+          <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-500">
             {m.bio}
           </p>
         )}
@@ -74,13 +74,13 @@ function MemberCard({ m, compact }: { m: MemberView; compact?: boolean }) {
 
 function DepartmentSection({ dept }: { dept: DepartmentView }) {
   return (
-    <div className="rounded-2xl border border-gray-800/50 bg-black/20 p-5 md:p-6">
+    <div className="rounded-2xl border border-line bg-slate-50/60 p-5 md:p-6">
       {/* Department header */}
       <div className="mb-5 flex items-baseline gap-3">
-        <h3 className="font-display text-lg font-bold uppercase tracking-wide text-gray-100">
+        <h3 className="font-display text-lg font-bold uppercase tracking-wide text-slate-900">
           {dept.name}
         </h3>
-        <p className="hidden truncate text-xs text-gray-600 md:block">
+        <p className="hidden truncate text-xs text-slate-400 md:block">
           {dept.mission.split(":")[0]}
         </p>
       </div>
@@ -94,19 +94,19 @@ function DepartmentSection({ dept }: { dept: DepartmentView }) {
           {/* Connector: boss → team */}
           {dept.members.length > 0 && (
             <div className="flex justify-center">
-              <div className="h-6 w-px bg-gradient-to-b from-[#2dd4bf]/50 to-gray-700/60" />
+              <div className="h-6 w-px bg-gradient-to-b from-sky/60 to-gray-700/60" />
             </div>
           )}
         </>
       ) : (
-        <p className="mb-3 text-center text-[11px] uppercase tracking-wider text-gray-600">
+        <p className="mb-3 text-center text-[11px] uppercase tracking-wider text-slate-400">
           Reports to leadership
         </p>
       )}
 
       {/* Team row under a shared horizontal rail */}
       {dept.members.length > 0 && (
-        <div className={dept.boss ? "border-t border-gray-700/60 pt-4" : ""}>
+        <div className={dept.boss ? "border-t border-line/60 pt-4" : ""}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dept.members.map((m) => (
               <MemberCard key={m.id} m={m} compact />
@@ -117,8 +117,8 @@ function DepartmentSection({ dept }: { dept: DepartmentView }) {
 
       {/* Tools & workspaces */}
       {dept.tools.length > 0 && (
-        <div className="mt-4 border-t border-gray-800/60 pt-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+        <div className="mt-4 border-t border-line pt-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Tools & workspaces
           </p>
           <div className="flex flex-wrap gap-2">
@@ -130,7 +130,7 @@ function DepartmentSection({ dept }: { dept: DepartmentView }) {
                   target="_blank"
                   rel="noreferrer"
                   title={t.description}
-                  className="rounded-full border border-gray-700 bg-gray-800/40 px-3 py-1 text-[11px] text-gray-300 transition-colors hover:border-[#2dd4bf]/50 hover:text-[#2dd4bf]"
+                  className="rounded-full border border-line bg-slate-100 px-3 py-1 text-[11px] text-slate-700 transition-colors hover:border-sky/60 hover:text-skydeep"
                 >
                   {t.label} ↗
                 </a>
@@ -139,7 +139,7 @@ function DepartmentSection({ dept }: { dept: DepartmentView }) {
                   key={t.label}
                   href={t.href}
                   title={t.description}
-                  className="rounded-full border border-gray-700 bg-gray-800/40 px-3 py-1 text-[11px] text-gray-300 transition-colors hover:border-[#2dd4bf]/50 hover:text-[#2dd4bf]"
+                  className="rounded-full border border-line bg-slate-100 px-3 py-1 text-[11px] text-slate-700 transition-colors hover:border-sky/60 hover:text-skydeep"
                 >
                   {t.label}
                 </Link>

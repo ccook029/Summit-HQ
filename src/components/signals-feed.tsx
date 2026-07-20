@@ -47,19 +47,19 @@ export default function SignalsFeed() {
   if (signals.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-gray-800/80 bg-[#101010]/80 p-4">
-      <h2 className="text-xs uppercase tracking-widest text-gray-600 mb-3">
+    <section className="rounded-2xl border border-line bg-panel/95 p-4">
+      <h2 className="text-xs uppercase tracking-widest text-slate-400 mb-3">
         Signals — last 24h across Summit tools
       </h2>
       <ul className="space-y-2">
         {signals.slice(0, 8).map((s, i) => (
           <li key={`${s.at}-${i}`} className="flex items-baseline gap-3 text-sm">
-            <span className="shrink-0 text-[10px] uppercase tracking-wider text-[#2dd4bf] border border-cyan-900/60 rounded-full px-2 py-0.5">
+            <span className="shrink-0 text-[10px] uppercase tracking-wider text-skydeep border border-cyan-900/60 rounded-full px-2 py-0.5">
               {s.source}
             </span>
-            <span className="text-gray-300">{s.headline}</span>
-            {s.detail && <span className="text-gray-600 truncate">{s.detail}</span>}
-            <span className="ml-auto shrink-0 text-xs text-gray-600">
+            <span className="text-slate-700">{s.headline}</span>
+            {s.detail && <span className="text-slate-400 truncate">{s.detail}</span>}
+            <span className="ml-auto shrink-0 text-xs text-slate-400">
               {timeAgo(s.at)}
             </span>
           </li>

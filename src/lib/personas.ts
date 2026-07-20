@@ -43,8 +43,8 @@ const leadership: LeaderPersona[] = [
     name: "Chris Cook",
     title: "Owner",
     avatarInitials: "CC",
-    avatarColor: "bg-[#0f766e]",
-    avatarAccent: "ring-[#2dd4bf]",
+    avatarColor: "bg-navy",
+    avatarAccent: "ring-sky",
   },
 ];
 

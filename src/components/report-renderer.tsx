@@ -148,7 +148,7 @@ function InlineText({ text }: { text: string }) {
       {parts.map((part, i) => {
         if (part.startsWith("**") && part.endsWith("**")) {
           return (
-            <strong key={i} className="text-gray-100 font-semibold">
+            <strong key={i} className="text-slate-900 font-semibold">
               {part.slice(2, -2)}
             </strong>
           );
@@ -166,15 +166,15 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
     <div className="space-y-1">
       {/* Report header bar */}
       {(agentName || date) && (
-        <div className="flex items-center justify-between border-b border-[#2dd4bf]/30 pb-3 mb-4">
+        <div className="flex items-center justify-between border-b border-sky/40 pb-3 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-6 bg-[#2dd4bf] rounded-full" />
+            <div className="w-1 h-6 bg-navy rounded-full" />
             {agentName && (
-              <span className="text-sm font-semibold text-gray-200">{agentName}</span>
+              <span className="text-sm font-semibold text-slate-800">{agentName}</span>
             )}
           </div>
           {date && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-slate-500">
               {new Date(date).toLocaleDateString("en-US", {
                 weekday: "short",
                 year: "numeric",
@@ -194,7 +194,7 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
             return (
               <h2
                 key={idx}
-                className="text-base font-bold text-white mt-5 mb-2 pb-1.5 border-b-2 border-[#2dd4bf]/50"
+                className="text-base font-bold text-slate-900 mt-5 mb-2 pb-1.5 border-b-2 border-sky/50"
               >
                 {block.content}
               </h2>
@@ -202,14 +202,14 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
 
           case "h3":
             return (
-              <h3 key={idx} className="text-sm font-semibold text-gray-200 mt-4 mb-1.5">
+              <h3 key={idx} className="text-sm font-semibold text-slate-800 mt-4 mb-1.5">
                 {block.content}
               </h3>
             );
 
           case "paragraph":
             return (
-              <p key={idx} className="text-sm text-gray-400 leading-relaxed mb-1.5">
+              <p key={idx} className="text-sm text-slate-500 leading-relaxed mb-1.5">
                 <InlineText text={block.content} />
               </p>
             );
@@ -218,11 +218,11 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
             return (
               <div
                 key={idx}
-                className="border-l-4 border-[#2dd4bf]/60 bg-[#2dd4bf]/5 px-4 py-2.5 mb-2 rounded-r"
+                className="border-l-4 border-sky/60 bg-sky/10 px-4 py-2.5 mb-2 rounded-r"
               >
                 <div className="flex items-start gap-2">
                   <PriorityBadge priority={block.priority} />
-                  <span className="text-sm text-gray-300 leading-relaxed">
+                  <span className="text-sm text-slate-700 leading-relaxed">
                     <InlineText text={block.content} />
                   </span>
                 </div>
@@ -233,9 +233,9 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
             return (
               <div
                 key={idx}
-                className="border-l-4 border-red-600 bg-red-900/20 px-4 py-2.5 mb-2 rounded-r"
+                className="border-l-4 border-red-600 bg-red-50 px-4 py-2.5 mb-2 rounded-r"
               >
-                <span className="text-sm text-red-300 font-semibold">
+                <span className="text-sm text-red-700 font-semibold">
                   ALERT: {block.content}
                 </span>
               </div>
@@ -244,12 +244,12 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
           case "bullet":
             return (
               <div key={idx} className="flex items-start gap-2.5 pl-2 mb-1">
-                <span className="text-[#2dd4bf] mt-1.5 text-xs leading-none select-none shrink-0">
+                <span className="text-skydeep mt-1.5 text-xs leading-none select-none shrink-0">
                   {"\u25CF"}
                 </span>
                 <div className="flex items-start gap-1 flex-1 min-w-0">
                   <PriorityBadge priority={block.priority} />
-                  <span className="text-sm text-gray-400 leading-relaxed">
+                  <span className="text-sm text-slate-500 leading-relaxed">
                     <InlineText text={block.content} />
                   </span>
                 </div>
@@ -259,12 +259,12 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
           case "numbered":
             return (
               <div key={idx} className="flex items-start gap-2.5 pl-2 mb-1">
-                <span className="text-[#2dd4bf] text-xs font-bold mt-0.5 w-5 text-right shrink-0">
+                <span className="text-skydeep text-xs font-bold mt-0.5 w-5 text-right shrink-0">
                   {block.number}.
                 </span>
                 <div className="flex items-start gap-1 flex-1 min-w-0">
                   <PriorityBadge priority={block.priority} />
-                  <span className="text-sm text-gray-400 leading-relaxed">
+                  <span className="text-sm text-slate-500 leading-relaxed">
                     <InlineText text={block.content} />
                   </span>
                 </div>
@@ -275,14 +275,14 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
             if (!block.rows || block.rows.length === 0) return null;
             const [header, ...dataRows] = block.rows;
             return (
-              <div key={idx} className="my-3 overflow-x-auto rounded-lg border border-gray-800">
+              <div key={idx} className="my-3 overflow-x-auto rounded-lg border border-line">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-[#111]">
+                    <tr className="bg-panel">
                       {header.map((cell, ci) => (
                         <th
                           key={ci}
-                          className="px-3 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700"
+                          className="px-3 py-2 text-left text-xs font-semibold text-slate-700 border-b border-line"
                         >
                           {cell}
                         </th>
@@ -293,12 +293,12 @@ export default function ReportRenderer({ text, agentName, date }: ReportRenderer
                     {dataRows.map((row, ri) => (
                       <tr
                         key={ri}
-                        className={ri % 2 === 0 ? "" : "bg-gray-900/30"}
+                        className={ri % 2 === 0 ? "" : "bg-slate-50/30"}
                       >
                         {row.map((cell, ci) => (
                           <td
                             key={ci}
-                            className="px-3 py-2 text-gray-400 border-b border-gray-800/50"
+                            className="px-3 py-2 text-slate-500 border-b border-line"
                           >
                             {cell}
                           </td>

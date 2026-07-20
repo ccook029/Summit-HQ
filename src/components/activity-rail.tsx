@@ -34,7 +34,7 @@ export default function ActivityRail({
   const reduce = useReducedMotion();
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-gray-800/60 bg-[#111]/40">
+    <div className="relative overflow-hidden rounded-xl border border-line bg-panel">
       {!reduce && (
         <div
           className="pointer-events-none absolute inset-0"
@@ -47,7 +47,7 @@ export default function ActivityRail({
         />
       )}
       <div className="relative flex items-center gap-2 overflow-x-auto chat-scroll px-3 py-2.5">
-        <span className="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+        <span className="shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
           Live
         </span>
         {personas.map((p) => {
@@ -56,7 +56,7 @@ export default function ActivityRail({
           return (
             <div
               key={p.agentId}
-              className="flex shrink-0 items-center gap-2 rounded-full border border-gray-800/70 bg-[#0d0d0d]/70 py-1 pl-2 pr-3"
+              className="flex shrink-0 items-center gap-2 rounded-full border border-line/70 bg-slate-50/70 py-1 pl-2 pr-3"
             >
               <span className="relative flex h-2 w-2">
                 {active && !reduce && (
@@ -68,12 +68,12 @@ export default function ActivityRail({
                 )}
                 <span
                   className={`relative inline-flex h-2 w-2 rounded-full ${
-                    active ? "bg-green-500" : "bg-gray-600"
+                    active ? "bg-green-500" : "bg-slate-300"
                   }`}
                 />
               </span>
-              <span className="text-xs font-medium text-gray-300">{p.name}</span>
-              <span className="text-[10px] text-gray-600">
+              <span className="text-xs font-medium text-slate-700">{p.name}</span>
+              <span className="text-[10px] text-slate-400">
                 {relativeTime(data?.lastRun)}
               </span>
             </div>

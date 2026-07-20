@@ -34,7 +34,7 @@ export function useToast(): PushToast {
 const ACCENT: Record<ToastKind, string> = {
   success: "bg-green-500",
   error: "bg-red-500",
-  info: "bg-[#2dd4bf]",
+  info: "bg-navy",
 };
 
 const ICON: Record<ToastKind, string> = {
@@ -68,7 +68,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
               exit={reduce ? { opacity: 0 } : { opacity: 0, x: 48, scale: 0.96 }}
               transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-start gap-3 overflow-hidden rounded-xl border border-gray-800/70 bg-[#141414]/95 p-3.5 shadow-xl backdrop-blur-sm"
+              className="flex items-start gap-3 overflow-hidden rounded-xl border border-line/70 bg-panel/95 p-3.5 shadow-xl backdrop-blur-sm"
             >
               <span
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${ACCENT[t.kind]}`}
@@ -76,9 +76,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {ICON[t.kind]}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white">{t.title}</p>
+                <p className="text-sm font-medium text-slate-900">{t.title}</p>
                 {t.description && (
-                  <p className="mt-0.5 text-xs leading-relaxed text-gray-400">
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                     {t.description}
                   </p>
                 )}

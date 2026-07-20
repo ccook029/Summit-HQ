@@ -64,7 +64,7 @@ export default function KnowledgePage() {
       />
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-slate-500">Loading…</p>
       ) : (
         <>
           <textarea
@@ -76,10 +76,10 @@ export default function KnowledgePage() {
                 ? "e.g.\n- Summit sells [what] to [whom] — the ICP is [who buys].\n- We're cash-basis on payables.\n- Recurring vendor X = [what those payments are].\n- Voice: direct, plain, no buzzwords."
                 : "(No company knowledge has been added yet.)"
             }
-            className="w-full min-h-[420px] rounded-xl border border-gray-800 bg-[#0a0a0a] p-4 font-mono text-sm text-gray-200 focus:border-[#2dd4bf] focus:outline-none disabled:opacity-70"
+            className="w-full min-h-[420px] rounded-xl border border-line bg-paper p-4 font-mono text-sm text-slate-800 focus:border-sky focus:outline-none disabled:opacity-70"
           />
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-slate-400">
               {meta.updatedAt
                 ? `Last updated ${new Date(meta.updatedAt).toLocaleString()}${meta.updatedBy ? ` by ${meta.updatedBy}` : ""}`
                 : "Not saved yet"}
@@ -88,12 +88,12 @@ export default function KnowledgePage() {
               <button
                 onClick={save}
                 disabled={saving}
-                className="rounded-lg bg-[#2dd4bf] text-black font-semibold px-5 py-2 text-sm hover:bg-[#5eead4] transition-colors disabled:opacity-50"
+                className="rounded-lg bg-navy text-white font-semibold px-5 py-2 text-sm hover:bg-navy-deep transition-colors disabled:opacity-50"
               >
                 {saving ? "Saving…" : saved ? "Saved ✓" : "Save"}
               </button>
             ) : (
-              <span className="text-xs text-gray-600">
+              <span className="text-xs text-slate-400">
                 Read-only — ask the accounting owner to edit.
               </span>
             )}

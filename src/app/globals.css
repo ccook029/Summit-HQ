@@ -1,21 +1,27 @@
 @import "tailwindcss";
 
-/* ── Tilt Hockey brand tokens ── */
-:root {
-  /* One accent for the whole OS (hub + every module). */
-  --accent: #2dd4bf;
-  --accent-dark: #00a6c9;
-  --accent-glow: rgba(0, 214, 255, 0.25);
-  /* Back-compat aliases (older rules referenced --tilt-red, which was cyan). */
-  --tilt-red: #2dd4bf;
-  --tilt-red-dark: #00a6c9;
-  --tilt-black: #0a0a0a;
-  --tilt-charcoal: #141414;
-  --tilt-gray: #1e1e1e;
-  --tilt-ice: #d4e5f7;
+/* ── Summit Equipment brand tokens ──
+   Sampled from the Summit Equipment logo: navy peaks + sky-blue accent on a
+   light ground. Change these four values and the whole OS follows. */
+@theme {
+  --color-navy: #163e6c;      /* wordmark / primary actions */
+  --color-navy-deep: #0f2d51; /* hover / emphasis */
+  --color-sky: #5fa9f5;       /* logo sky-blue: highlights, rings, glows */
+  --color-skydeep: #2d7dd2;   /* readable link/accent blue on white */
+  --color-steel: #b3b7bc;     /* "EQUIPMENT" gray: muted labels */
+  --color-paper: #f5f8fc;     /* page background */
+  --color-panel: #ffffff;     /* cards / panels */
+  --color-line: #dde6ef;      /* hairline borders */
+  --color-ink: #162336;
 }
 
-/* ── Typography: athletic display + clean body ── */
+:root {
+  --accent: #2d7dd2;
+  --accent-dark: #163e6c;
+  --accent-glow: rgba(95, 169, 245, 0.25);
+}
+
+/* ── Typography: confident display + clean body ── */
 body {
   font-family: "Barlow", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
@@ -26,7 +32,7 @@ body {
 
 /* Visible keyboard focus ring (mouse clicks stay clean) */
 :focus-visible {
-  outline: 2px solid #2dd4bf;
+  outline: 2px solid #2d7dd2;
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -35,55 +41,14 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Animated red shimmer for headline accents */
+/* Animated shimmer for headline accents */
 .text-shimmer {
-  background: linear-gradient(100deg, #2dd4bf 28%, #7be9ff 50%, #2dd4bf 72%);
+  background: linear-gradient(100deg, #163e6c 28%, #2d7dd2 50%, #163e6c 72%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: sheenSweep 4.5s linear infinite;
-}
-
-/* Fine film grain overlay (applied to a fixed layer in the root layout) */
-.grain {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  opacity: 0.045;
-}
-
-/* Carbon fiber texture overlay (kept for subtle micro-texture) */
-.carbon-texture {
-  background-image:
-    linear-gradient(45deg, rgba(255,255,255,0.015) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255,255,255,0.015) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.015) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.015) 75%);
-  background-size: 4px 4px;
-  background-position: 0 0, 0 2px, 2px -2px, -2px 0;
-}
-
-/* Red glow effect for hero elements */
-.tilt-glow {
-  box-shadow: 0 0 40px rgba(228, 0, 43, 0.15), 0 0 80px rgba(228, 0, 43, 0.05);
-}
-
-/* Red gradient border */
-.tilt-border-glow {
-  border-image: linear-gradient(135deg, var(--tilt-red), transparent 60%) 1;
-}
-
-/* Subtle ice rink gradient background */
-.ice-gradient {
-  background: radial-gradient(ellipse at 50% 120%, rgba(228, 0, 43, 0.04) 0%, transparent 70%);
-}
-
-/* Pulsing red dot */
-.tilt-pulse {
-  animation: tiltPulse 2s ease-in-out infinite;
-}
-@keyframes tiltPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 /* Hover lift — soft rise on cards/buttons, matched to the motion easing.
@@ -98,21 +63,22 @@ html {
 }
 .lift:hover {
   transform: translateY(-4px);
+  box-shadow: 0 12px 30px -14px rgba(22, 62, 108, 0.25);
 }
 
-/* Sheen sweep for the hero shield / accent surfaces */
+/* Sheen sweep for accent surfaces */
 @keyframes sheenSweep {
   0% { background-position: -150% 0; }
   100% { background-position: 250% 0; }
 }
 
-/* Animated aurora — slowly drifting cyan glow behind the whole app (matches
-   the brand accent instead of the old crimson that fought it). */
+/* Animated aurora — a faint drifting sky-blue wash behind the whole app.
+   On the light theme it reads as air/altitude, not glow. */
 .aurora {
   background:
-    radial-gradient(40% 50% at 18% 28%, rgba(0, 214, 255, 0.11), transparent 60%),
-    radial-gradient(38% 46% at 82% 18%, rgba(0, 160, 210, 0.08), transparent 60%),
-    radial-gradient(46% 56% at 62% 82%, rgba(0, 120, 180, 0.10), transparent 60%);
+    radial-gradient(40% 50% at 18% 28%, rgba(95, 169, 245, 0.10), transparent 60%),
+    radial-gradient(38% 46% at 82% 18%, rgba(22, 62, 108, 0.06), transparent 60%),
+    radial-gradient(46% 56% at 62% 82%, rgba(45, 125, 210, 0.07), transparent 60%);
   filter: blur(40px);
   animation: auroraDrift 26s ease-in-out infinite alternate;
 }
@@ -120,6 +86,15 @@ html {
   0%   { transform: translate3d(-3%, -2%, 0) scale(1.05); }
   50%  { transform: translate3d(2%, 3%, 0) scale(1.14); }
   100% { transform: translate3d(3%, -3%, 0) scale(1.06); }
+}
+
+/* Pulsing status dot */
+.summit-pulse {
+  animation: summitPulse 2s ease-in-out infinite;
+}
+@keyframes summitPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* Respect users who ask for less motion — kill all decorative animation. */
@@ -137,16 +112,15 @@ html {
   .lift:hover {
     transform: none;
   }
-  .tilt-pulse {
+  .summit-pulse {
     animation: none;
   }
 }
 
-
 /* Chat messages */
 .chat-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: #c3cedb transparent;
 }
 .chat-scroll::-webkit-scrollbar {
   width: 6px;
@@ -155,6 +129,6 @@ html {
   background: transparent;
 }
 .chat-scroll::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #c3cedb;
   border-radius: 3px;
 }

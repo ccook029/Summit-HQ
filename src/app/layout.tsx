@@ -4,26 +4,26 @@ import "./globals.css";
 import { ToastProvider } from "@/components/toast";
 import { CommandPalette, CommandButton } from "@/components/command-palette";
 import { Confetti } from "@/components/confetti";
-import CursorSpotlight from "@/components/cursor-spotlight";
 import { RunPipelineProvider } from "@/components/run-pipeline";
 import DepartmentsMenu from "@/components/departments-menu";
 import SignOut from "@/components/sign-out";
 import OwnerNav from "@/components/owner-nav";
+import { SummitMark } from "@/components/logo";
 
 const SITE_URL = "https://summit-hq.vercel.app";
 const OG_DESCRIPTION =
-  "AI-powered corporate headquarters for Summit — an AI staff running finance, operations, and business development under the owner's review.";
+  "AI-powered corporate headquarters for Summit Equipment — an AI staff running finance, operations, and business development under the owner's review.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Summit Headquarters",
+    default: "Summit Equipment HQ",
     template: "%s · Summit HQ",
   },
   description: OG_DESCRIPTION,
   applicationName: "Summit HQ",
   openGraph: {
-    title: "Summit Headquarters",
+    title: "Summit Equipment HQ",
     description: OG_DESCRIPTION,
     url: SITE_URL,
     siteName: "Summit HQ",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#163e6c",
 };
 
 export default function RootLayout({
@@ -54,23 +54,21 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0a0a0a] text-gray-100 min-h-screen carbon-texture">
+      <body className="bg-paper text-slate-900 min-h-screen">
         {/* Animated aurora backdrop */}
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
           <div className="aurora absolute inset-[-12%]" />
         </div>
-        {/* Film grain + cursor spotlight atmosphere */}
-        <div className="grain pointer-events-none fixed inset-0 z-[45]" />
-        <CursorSpotlight />
         <ToastProvider>
         <RunPipelineProvider>
-        <header className="border-b border-gray-800/60 px-4 sm:px-6 py-4 sm:py-6 bg-[#0a0a0a]/90 backdrop-blur-sm sticky top-0 z-50">
+        <header className="border-b border-line px-4 sm:px-6 py-4 sm:py-6 bg-paper/90 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <Link href="/" className="flex items-center gap-3 sm:gap-5 group shrink-0">
-              <span className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-[0.2em] text-white">
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <SummitMark className="h-9 w-auto" />
+              <span className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-[0.18em] text-navy">
                 Summit
               </span>
-              <span className="hidden sm:inline text-base text-gray-500 border-l border-gray-700 pl-5 group-hover:text-[#2dd4bf] transition-colors">
+              <span className="hidden sm:inline text-base text-slate-500 border-l border-line pl-4 group-hover:text-skydeep transition-colors">
                 Headquarters
               </span>
             </Link>
@@ -80,23 +78,23 @@ export default function RootLayout({
               <CommandButton />
               <Link
                 href="/org"
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
               >
                 Org Chart
               </Link>
               <DepartmentsMenu />
-              <span className="hidden sm:inline text-xs text-gray-700">|</span>
+              <span className="hidden sm:inline text-xs text-slate-400">|</span>
               <OwnerNav />
-              <span className="hidden sm:inline text-xs text-gray-700">|</span>
+              <span className="hidden sm:inline text-xs text-slate-400">|</span>
               <Link
                 href="/dashboard"
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
               >
                 Operations
               </Link>
               <Link
                 href="/knowledge"
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
               >
                 Knowledge
               </Link>

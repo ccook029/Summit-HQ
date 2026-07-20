@@ -1,8 +1,9 @@
 # Summit HQ
 
-The corporate headquarters for **Summit** — an internal hub where AI
-*employees*, grouped into *departments* with *bosses* who review work before
-it reaches the owner, run the day-to-day of the business.
+The corporate headquarters for **Summit Equipment** ([summitel.ca](https://summitel.ca)) —
+an internal hub where AI *employees*, grouped into *departments* with *bosses*
+who review work before it reaches the owner, run the day-to-day of the
+business: buying, selling, and leasing liquid and dry bulk pneumatic tanks.
 
 Built on the "Tilt OS" pattern (see `docs/HQBLUEPRINT.md` for the build
 guide this repo follows). One Next.js App Router app on Vercel; state in

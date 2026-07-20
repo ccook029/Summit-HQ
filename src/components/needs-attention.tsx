@@ -29,11 +29,11 @@ export default function NeedsAttention({ failures }: { failures: Failure[] }) {
           className="overflow-hidden"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-red-500/30 bg-red-500/[0.07] px-4 py-3">
-            <span className="flex items-center gap-2 text-sm font-semibold text-red-300">
+            <span className="flex items-center gap-2 text-sm font-semibold text-red-700">
               <AlertIcon className="text-[15px]" />
               Needs attention
             </span>
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-slate-500">
               {failures.length} recent {failures.length === 1 ? "failure" : "failures"}:
             </span>
             <div className="flex flex-wrap items-center gap-2">
@@ -41,7 +41,7 @@ export default function NeedsAttention({ failures }: { failures: Failure[] }) {
                 <Link
                   key={f.agentId}
                   href={`/org/${f.agentId}`}
-                  className="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs text-red-200 transition-colors hover:bg-red-500/20"
+                  className="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs text-red-800 transition-colors hover:bg-red-500/20"
                 >
                   {f.name}
                 </Link>

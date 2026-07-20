@@ -105,7 +105,7 @@ export function RunPipelineProvider({ children }: { children: ReactNode }) {
             animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, x: "-50%" }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 30, x: "-50%" }}
             transition={{ duration: 0.32, ease: EASE_OUT }}
-            className="fixed bottom-6 left-1/2 z-[120] w-[min(92vw,420px)] overflow-hidden rounded-2xl border border-gray-800 bg-[#121214]/95 p-4 shadow-2xl backdrop-blur"
+            className="fixed bottom-6 left-1/2 z-[120] w-[min(92vw,420px)] overflow-hidden rounded-2xl border border-line bg-panel/95 p-4 shadow-2xl backdrop-blur"
             role="status"
             aria-live="polite"
           >
@@ -113,10 +113,10 @@ export function RunPipelineProvider({ children }: { children: ReactNode }) {
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-md ${
                   state.status === "error"
-                    ? "bg-red-500/15 text-red-400"
+                    ? "bg-red-500/15 text-red-600"
                     : state.status === "done"
-                    ? "bg-green-500/15 text-green-400"
-                    : "bg-[#2dd4bf]/15 text-[#2dd4bf]"
+                    ? "bg-green-500/15 text-green-700"
+                    : "bg-sky/15 text-skydeep"
                 }`}
               >
                 {state.status === "error" ? (
@@ -127,8 +127,8 @@ export function RunPipelineProvider({ children }: { children: ReactNode }) {
                   <BoltIcon className="text-[13px]" />
                 )}
               </span>
-              <span className="text-sm font-semibold text-white">{state.label}</span>
-              <span className="ml-auto text-[11px] uppercase tracking-wider text-gray-500">
+              <span className="text-sm font-semibold text-slate-900">{state.label}</span>
+              <span className="ml-auto text-[11px] uppercase tracking-wider text-slate-500">
                 {state.status === "done"
                   ? "Complete"
                   : state.status === "error"
@@ -138,10 +138,10 @@ export function RunPipelineProvider({ children }: { children: ReactNode }) {
             </div>
 
             {/* Progress bar */}
-            <div className="mb-3 h-1 overflow-hidden rounded-full bg-gray-800">
+            <div className="mb-3 h-1 overflow-hidden rounded-full bg-slate-100">
               <motion.div
                 className={`h-full rounded-full ${
-                  state.status === "error" ? "bg-red-500" : "bg-[#2dd4bf]"
+                  state.status === "error" ? "bg-red-500" : "bg-navy"
                 }`}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5, ease: EASE_OUT }}
@@ -160,12 +160,12 @@ export function RunPipelineProvider({ children }: { children: ReactNode }) {
                     <span
                       className={`flex h-3.5 w-3.5 items-center justify-center rounded-full ${
                         failed
-                          ? "text-red-400"
+                          ? "text-red-600"
                           : done
-                          ? "text-[#2dd4bf]"
+                          ? "text-skydeep"
                           : current
-                          ? "text-[#2dd4bf]"
-                          : "text-gray-700"
+                          ? "text-skydeep"
+                          : "text-slate-400"
                       }`}
                     >
                       {failed ? (
@@ -173,14 +173,14 @@ export function RunPipelineProvider({ children }: { children: ReactNode }) {
                       ) : done ? (
                         <CheckIcon className="text-[11px]" />
                       ) : current ? (
-                        <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-[#2dd4bf]/40 border-t-[#2dd4bf]" />
+                        <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-sky/40 border-t-skydeep" />
                       ) : (
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-700" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
                       )}
                     </span>
                     <span
                       className={
-                        done || current ? "text-gray-300" : "text-gray-600"
+                        done || current ? "text-slate-700" : "text-slate-400"
                       }
                     >
                       {label}

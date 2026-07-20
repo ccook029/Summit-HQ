@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SummitLogo } from "@/components/logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -44,19 +45,18 @@ function LoginForm() {
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-800/80 bg-[#101010]/90 backdrop-blur p-8">
+      <div className="w-full max-w-sm rounded-2xl border border-line bg-panel/95 backdrop-blur p-8">
         <div className="flex flex-col items-center gap-3 mb-8">
-          <h1 className="font-display font-bold text-2xl uppercase tracking-[0.2em]">
-            Summit <span className="text-[#2dd4bf]">HQ</span>
-          </h1>
-          <p className="text-sm text-gray-500 text-center">
+          <SummitLogo className="h-24 w-auto" />
+          <h1 className="sr-only">Summit Equipment HQ</h1>
+          <p className="text-sm text-slate-500 text-center">
             Owner sign-in — your AI staff is inside.
           </p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
+            <label className="block text-xs uppercase tracking-wider text-slate-500 mb-1">
               Passcode
             </label>
             <input
@@ -65,12 +65,12 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              className="w-full rounded-lg bg-[#0a0a0a] border border-gray-800 px-3 py-2 text-sm focus:border-[#2dd4bf] focus:outline-none"
+              className="w-full rounded-lg bg-paper border border-line px-3 py-2 text-sm focus:border-sky focus:outline-none"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 border border-red-900/60 bg-red-950/30 rounded-lg px-3 py-2">
+            <p className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -78,7 +78,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-[#2dd4bf] text-black font-semibold py-2 text-sm hover:bg-[#5eead4] transition-colors disabled:opacity-50"
+            className="w-full rounded-lg bg-navy text-white font-semibold py-2 text-sm hover:bg-navy-deep transition-colors disabled:opacity-50"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
