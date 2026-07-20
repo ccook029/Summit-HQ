@@ -37,6 +37,7 @@ export function SummitLogo({ className = "h-14 w-auto" }: { className?: string }
       alt="Summit Equipment"
       className={className}
       draggable={false}
+      fetchPriority="high"
     />
   );
 }

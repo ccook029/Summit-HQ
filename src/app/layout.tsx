@@ -8,7 +8,7 @@ import { RunPipelineProvider } from "@/components/run-pipeline";
 import DepartmentsMenu from "@/components/departments-menu";
 import SignOut from "@/components/sign-out";
 import OwnerNav from "@/components/owner-nav";
-import { SummitMark } from "@/components/logo";
+import { SummitLogo } from "@/components/logo";
 
 const SITE_URL = "https://summit-hq.vercel.app";
 const OG_DESCRIPTION =
@@ -63,11 +63,8 @@ export default function RootLayout({
         <RunPipelineProvider>
         <header className="border-b border-line px-4 sm:px-6 py-4 sm:py-6 bg-paper/90 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <SummitMark className="h-9 w-auto" />
-              <span className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-[0.18em] text-navy">
-                Summit
-              </span>
+            <Link href="/" className="flex items-center gap-4 group shrink-0">
+              <SummitLogo className="h-14 sm:h-16 w-auto" />
               <span className="hidden sm:inline text-base text-slate-500 border-l border-line pl-4 group-hover:text-skydeep transition-colors">
                 Headquarters
               </span>
