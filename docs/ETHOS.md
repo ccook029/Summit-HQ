@@ -36,8 +36,10 @@ organization belongs to the numbered corp, set up with **locations** — Summit
 is the main location, True North the other. The books therefore contain both
 divisions: always attribute transactions to the correct location, never mix
 the divisions' numbers, and flag any ambiguous transaction instead of
-guessing. "Summit's numbers" always means the Summit location's numbers, not
-the whole org's.
+guessing. "Summit's numbers" always means the Summit location's numbers (named
+"Head Office" in Books), not the whole org's. **Owner decision (Aug 2026):**
+the finance team currently does the bookkeeping for **both divisions** —
+same discipline, per-location attribution, until the owner splits them.
 
 ## 2. What we believe
 

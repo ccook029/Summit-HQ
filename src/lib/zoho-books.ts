@@ -535,7 +535,7 @@ export async function fetchBooksSnapshot(): Promise<string> {
     "## Zoho Books Snapshot (read-only)",
     summitLoc
       ? `Location filter: **${summitLoc.name}** (the org also contains True North Steelworks — its rows are excluded where Zoho tags them; treat untagged rows as needing location confirmation)`
-      : "⚠️ Location filter: NONE RESOLVED — these figures are ORG-WIDE (Summit + True North Steelworks combined). Attribute before using any number as \"Summit's\".",
+      : "Location filter: none — figures are ORG-WIDE (Summit/Head Office + True North Steelworks together, per the owner's current one-team-for-both setup). Attribute rows to their location when reporting per-division numbers.",
     `Chart of Accounts: ${accounts.total} accounts (${inactiveAccounts}+ inactive in sample) — shared org-wide`,
     `Uncategorized bank transactions: ${uncategorized.total}`,
     `Open invoices (A/R): ${invoices.total} — $${arTotal.toFixed(2)}+ outstanding (sample), ${overdueAR}+ overdue`,

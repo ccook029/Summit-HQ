@@ -62,7 +62,7 @@ async function renderFinanceContext(): Promise<string> {
     "",
     remit,
     "",
-    "IMPORTANT — CORPORATE STRUCTURE: this Zoho Books organization belongs to the numbered corporation that owns BOTH Summit (the main location) and True North Steelworks (a second location). The snapshot may include both divisions' activity. Attribute every figure to its location; if a transaction's division is ambiguous, flag it rather than guessing; and never present whole-org totals as Summit's numbers. (Location-level filtering will be wired into this feed with the owner — until then, state clearly when a figure might include True North.)",
+    "IMPORTANT — CORPORATE STRUCTURE: this Zoho Books organization belongs to the numbered corporation that owns BOTH Summit (its location is named 'Head Office' in Books) and True North Steelworks (second location). OWNER DECISION (Chris, Aug 2026): the finance team handles the bookkeeping for BOTH divisions for now — do the work for whichever division a transaction belongs to, but ALWAYS attribute each item to its location, flag anything ambiguous, and when reporting 'Summit's numbers' present the Head Office location's figures — never blend the divisions into one number without labeling it as the combined corp.",
     "",
     "(If the snapshot above is unavailable, the Zoho Books integration isn't wired yet — work from any report pasted into the brief, and say plainly which numbers you couldn't verify.)",
   ].join("\n");
