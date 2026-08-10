@@ -214,7 +214,7 @@ ${message}`;
     systemPrompt,
     userMessage,
     model,
-    maxTokens: isManager ? 2200 : 1600,
+    maxTokens: isManager ? 6144 : 6144,
     temperature: 0.4,
     images,
     documents,
@@ -230,13 +230,13 @@ ${message}`;
       systemPrompt,
       userMessage,
       model,
-      maxTokens: isManager ? 2200 : 1600,
+      maxTokens: 8192,
       temperature: 0.4,
       images,
       documents,
     });
     if (!res.text.trim()) {
-      throw new Error(`${name} came back empty twice — try sending that again.`);
+      throw new Error(`${name} came back empty twice (model ${model}, stop_reason ${res.stopReason ?? "unknown"}, ${res.outputTokens} output tokens). If stop_reason is max_tokens the reply budget is still too small — tell Claude.`);
     }
   }
 

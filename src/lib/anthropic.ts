@@ -68,6 +68,7 @@ export interface ClaudeResponse {
   inputTokens: number;
   outputTokens: number;
   model: string;
+  stopReason: string | null;
 }
 
 /**
@@ -162,6 +163,7 @@ export async function callClaude(
     inputTokens: response.usage?.input_tokens ?? 0,
     outputTokens: response.usage?.output_tokens ?? 0,
     model,
+    stopReason: response.stop_reason ?? null,
   };
 }
 

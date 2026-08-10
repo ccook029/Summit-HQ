@@ -331,7 +331,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
           profile?.deliverableGuidance
         ),
         model: employee.model ?? CLAUDE_MODEL,
-        maxTokens: 3072,
+        maxTokens: 8192,
         temperature: 0.4,
         webSearch: profile?.research,
       });
@@ -385,7 +385,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
           roundNumber
         ),
         model: reviewer.model ?? CLAUDE_MANAGER_MODEL,
-        maxTokens: 2048,
+        maxTokens: 4096,
         temperature: 0.2,
       });
       tokens.input += reviewRes.inputTokens;

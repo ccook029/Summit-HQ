@@ -156,7 +156,7 @@ ${extra ? `${extra}\n\n` : ""}First, a short paragraph of your direction for the
     systemPrompt,
     userMessage,
     model: manager.model ?? CLAUDE_MANAGER_MODEL,
-    maxTokens: 2560,
+    maxTokens: 4096,
     temperature: 0.5,
   });
   const pieces = parsePlan(res.text, new Set(workers.keys())).slice(0, maxPieces);
