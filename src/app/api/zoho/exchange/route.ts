@@ -14,12 +14,12 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const DATA_CENTERS: Record<string, { accounts: string; api: string }> = {
-  com: { accounts: "https://accounts.zoho.com", api: "https://www.zohoapis.com" },
-  ca: { accounts: "https://accounts.zohocloud.ca", api: "https://www.zohoapis.ca" },
-  eu: { accounts: "https://accounts.zoho.eu", api: "https://www.zohoapis.eu" },
-  in: { accounts: "https://accounts.zoho.in", api: "https://www.zohoapis.in" },
-  au: { accounts: "https://accounts.zoho.com.au", api: "https://www.zohoapis.com.au" },
+const DATA_CENTERS: Record<string, { accounts: string; api: string; mail: string }> = {
+  com: { accounts: "https://accounts.zoho.com", api: "https://www.zohoapis.com", mail: "https://mail.zoho.com" },
+  ca: { accounts: "https://accounts.zohocloud.ca", api: "https://www.zohoapis.ca", mail: "https://mail.zohocloud.ca" },
+  eu: { accounts: "https://accounts.zoho.eu", api: "https://www.zohoapis.eu", mail: "https://mail.zoho.eu" },
+  in: { accounts: "https://accounts.zoho.in", api: "https://www.zohoapis.in", mail: "https://mail.zoho.in" },
+  au: { accounts: "https://accounts.zoho.com.au", api: "https://www.zohoapis.com.au", mail: "https://mail.zoho.com.au" },
 };
 
 export async function POST(request: NextRequest) {
@@ -99,11 +99,34 @@ export async function POST(request: NextRequest) {
     orgError = "Could not reach the Books API to list organizations.";
   }
 
+  // 3) Prove (or disprove) Mail access with THIS token, right now — so a
+  // missing ZohoMail scope is caught here instead of in production later.
+  let mailOk = false;
+  let mailError: string | null = null;
+  try {
+    const mailRes = await fetch(`${dc.mail}/api/accounts`, {
+      headers: { Authorization: `Zoho-oauthtoken ${tok.access_token}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (mailRes.ok) {
+      mailOk = true;
+    } else {
+      const t = await mailRes.text();
+      mailError = /INVALID_OAUTHSCOPE/i.test(t)
+        ? "The generated code did NOT include the Mail scopes — regenerate it with the FULL scope string above (all four parts, comma-separated, no spaces missing)."
+        : `Mail API returned ${mailRes.status}: ${t.slice(0, 160)}`;
+    }
+  } catch {
+    mailError = "Could not reach the Zoho Mail API from here.";
+  }
+
   return NextResponse.json({
     ok: true,
     refreshToken: tok.refresh_token,
     organizations: orgs,
     orgError,
+    mailOk,
+    mailError,
     accountsUrl: dc.accounts,
     apiDomain: dc.api,
     isDefaultDc: dc === DATA_CENTERS.com,

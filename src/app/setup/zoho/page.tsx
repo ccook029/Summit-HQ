@@ -12,6 +12,8 @@ interface ExchangeResult {
   refreshToken: string;
   organizations: { id: string; name: string }[];
   orgError: string | null;
+  mailOk?: boolean;
+  mailError?: string | null;
   accountsUrl: string;
   apiDomain: string;
   isDefaultDc: boolean;
@@ -134,8 +136,21 @@ export default function ZohoSetupPage() {
       {result && (
         <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
           <p className="text-sm font-semibold text-emerald-700">
-            Success — now copy these into Vercel → Settings → Environment
-            Variables (one variable per line), then redeploy:
+            Token created. Live checks with this exact token:
+          </p>
+          <ul className="text-sm space-y-1">
+            <li className={result.orgError ? "text-amber-700" : "text-emerald-700"}>
+              {result.orgError ? `⚠️ Books: ${result.orgError}` : "✅ Books: connected"}
+            </li>
+            <li className={result.mailOk ? "text-emerald-700" : "text-red-600"}>
+              {result.mailOk
+                ? "✅ Mail: connected — remittance reading will work"
+                : `❌ Mail: NOT working — ${result.mailError ?? "unknown"} Do NOT copy this token to Vercel; regenerate the code with the full scope and exchange again.`}
+            </li>
+          </ul>
+          <p className="text-sm font-semibold text-emerald-700">
+            When the checks are green, copy these into Vercel → Settings →
+            Environment Variables (one variable per line), then redeploy:
           </p>
           {result.organizations.length > 0 ? (
             result.organizations.map((o) => (
