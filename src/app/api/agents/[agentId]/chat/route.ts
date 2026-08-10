@@ -37,12 +37,14 @@ export async function POST(
     return NextResponse.json({ ok: true });
   }
 
-  const { message, history = [], images = [] } = body as {
+  const { message, history = [], images = [], documents = [], files = [] } = body as {
     message?: string;
     history?: { role: "user" | "assistant"; content: string }[];
     images?: { mediaType?: string; data?: string }[];
+    documents?: { name?: string; data?: string }[];
+    files?: { name?: string; text?: string }[];
   };
-  if (!message?.trim() && images.length === 0) {
+  if (!message?.trim() && images.length === 0 && documents.length === 0 && files.length === 0) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
@@ -57,10 +59,29 @@ export async function POST(
         i.data.length > 0
     )
     .slice(0, 4);
-  const totalBytes = cleanImages.reduce((n, i) => n + i.data.length, 0);
+  // PDFs: at most 2, base64 only. Text files: at most 4, truncated hard.
+  const cleanDocs = (Array.isArray(documents) ? documents : [])
+    .filter(
+      (d): d is { name: string; data: string } =>
+        typeof d?.name === "string" && typeof d?.data === "string" && d.data.length > 0
+    )
+    .slice(0, 2)
+    .map((d) => ({ name: d.name.slice(0, 120), data: d.data }));
+  const cleanFiles = (Array.isArray(files) ? files : [])
+    .filter(
+      (f): f is { name: string; text: string } =>
+        typeof f?.name === "string" && typeof f?.text === "string" && f.text.length > 0
+    )
+    .slice(0, 4)
+    .map((f) => ({ name: f.name.slice(0, 120), text: f.text.slice(0, 400_000) }));
+
+  const totalBytes =
+    cleanImages.reduce((n, i) => n + i.data.length, 0) +
+    cleanDocs.reduce((n, d) => n + d.data.length, 0) +
+    cleanFiles.reduce((n, f) => n + f.text.length, 0);
   if (totalBytes > 5_500_000) {
     return NextResponse.json(
-      { error: "Attachments too large — try fewer or smaller screenshots." },
+      { error: "Attachments too large — try fewer or smaller files." },
       { status: 413 }
     );
   }
@@ -68,9 +89,11 @@ export async function POST(
   try {
     const result = await runAgentConversation(
       agentId,
-      message?.trim() || "(see the attached screenshot)",
+      message?.trim() || "(see the attached file)",
       history,
-      cleanImages
+      cleanImages,
+      cleanDocs,
+      cleanFiles
     );
     return NextResponse.json({ ok: true, reply: result.reply });
   } catch (err) {

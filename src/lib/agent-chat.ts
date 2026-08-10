@@ -105,11 +105,23 @@ export interface ChatImage {
   data: string; // base64, no data: prefix
 }
 
+export interface ChatDocument {
+  name: string;
+  data: string; // base64 PDF, no data: prefix
+}
+
+export interface ChatTextFile {
+  name: string;
+  text: string; // extracted text (CSV from a spreadsheet, etc.)
+}
+
 export async function runAgentConversation(
   agentId: string,
   message: string,
   clientHistory: { role: "user" | "assistant"; content: string }[] = [],
-  images: ChatImage[] = []
+  images: ChatImage[] = [],
+  documents: ChatDocument[] = [],
+  textFiles: ChatTextFile[] = []
 ): Promise<AgentChatTurn> {
   const employee = getEmployeeById(agentId);
   if (!employee) throw new Error(`Unknown agent: ${agentId}`);
@@ -177,8 +189,16 @@ export async function runAgentConversation(
   const imageNote = images.length
     ? `\n\nThey attached ${images.length} screenshot${images.length > 1 ? "s" : ""} (shown to you above the text) — look at ${images.length > 1 ? "them" : "it"} carefully; ${images.length > 1 ? "they are" : "it is"} what they're talking about.`
     : "";
+  const docNote = documents.length
+    ? `\n\nThey attached ${documents.length} PDF${documents.length > 1 ? "s" : ""} (provided above the text) — read ${documents.length > 1 ? "them" : "it"} carefully.`
+    : "";
+  const fileBlock = textFiles.length
+    ? `\n\n## Attached files (extracted contents)\n${textFiles
+        .map((f) => `### ${f.name}\n\`\`\`\n${f.text}\n\`\`\``)
+        .join("\n\n")}`
+    : "";
 
-  const userMessage = `You are ${name}, chatting live with the Summit team (usually Chris, the owner). Answer their message directly and specifically, grounded in your recent work below and what you know about Summit. If you don't have the data, say exactly what you'd run or need — don't invent numbers. Keep it conversational and tight; this is a chat, not an email.${managerGuidance}${imageNote}
+  const userMessage = `You are ${name}, chatting live with the Summit team (usually Chris, the owner). Answer their message directly and specifically, grounded in your recent work below and what you know about Summit. If you don't have the data, say exactly what you'd run or need — don't invent numbers. Keep it conversational and tight; this is a chat, not an email.${managerGuidance}${imageNote}${docNote}${fileBlock}
 
 ## Your most recent reports
 ${reports}${orgBlocks}
@@ -197,6 +217,7 @@ ${message}`;
     maxTokens: isManager ? 2200 : 1600,
     temperature: 0.4,
     images,
+    documents,
   });
   // Rarely the API 200s with no text (observed in production as a ghost
   // bubble). Retry once; if it's still empty, fail loudly so the UI shows a
@@ -212,6 +233,7 @@ ${message}`;
       maxTokens: isManager ? 2200 : 1600,
       temperature: 0.4,
       images,
+      documents,
     });
     if (!res.text.trim()) {
       throw new Error(`${name} came back empty twice — try sending that again.`);
@@ -220,8 +242,16 @@ ${message}`;
 
   // The stored transcript is text-only — note the attachment instead of
   // persisting base64 blobs into KV.
-  const storedMessage = images.length
-    ? `[${images.length} screenshot${images.length > 1 ? "s" : ""} attached] ${message}`
+  const attachmentNames = [
+    ...documents.map((d) => d.name),
+    ...textFiles.map((f) => f.name),
+  ];
+  const noteParts = [
+    images.length ? `${images.length} screenshot${images.length > 1 ? "s" : ""}` : "",
+    attachmentNames.length ? attachmentNames.join(", ") : "",
+  ].filter(Boolean);
+  const storedMessage = noteParts.length
+    ? `[attached: ${noteParts.join("; ")}] ${message}`
     : message;
   await appendAgentChat(agentId, storedMessage, res.text).catch(() => {});
   return { reply: res.text };

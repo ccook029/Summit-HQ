@@ -17,21 +17,69 @@ interface Msg {
   /** Preview data-URLs for screenshots sent with this message (this session
    * only — the persisted transcript stores a text note instead). */
   images?: string[];
+  /** Names of non-image files sent with this message (PDFs, spreadsheets). */
+  files?: string[];
 }
 
 // ---------------------------------------------------------------------------
-// Screenshot attachments — attach / paste / drop an image, downscaled in the
-// browser (max 1600px, JPEG) so the request stays under Vercel's body cap.
+// Attachments — screenshots (downscaled in-browser), PDFs (sent as-is for
+// Claude to read natively), and spreadsheets/CSVs (converted to text in the
+// browser via SheetJS) so everything stays under Vercel's body cap.
 // ---------------------------------------------------------------------------
-interface Attachment {
-  mediaType: string;
-  data: string; // base64, no data: prefix
-  preview: string; // data URL for the thumbnail
-}
+type Attachment =
+  | { kind: "image"; mediaType: string; data: string; preview: string }
+  | { kind: "pdf"; name: string; data: string }
+  | { kind: "text"; name: string; text: string };
 
 const MAX_ATTACHMENTS = 4;
+const MAX_TEXT_CHARS = 350_000;
+const MAX_PDF_BYTES = 3_000_000;
+
+function truncateText(t: string): string {
+  return t.length > MAX_TEXT_CHARS
+    ? `${t.slice(0, MAX_TEXT_CHARS)}\n…[file truncated — ask for a smaller slice if the tail matters]`
+    : t;
+}
+
+async function readDataUrl(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 async function fileToAttachment(file: File): Promise<Attachment | null> {
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+
+  if (file.type === "application/pdf" || ext === "pdf") {
+    if (file.size > MAX_PDF_BYTES) {
+      alert(`${file.name} is over 3 MB — split the PDF or attach fewer pages.`);
+      return null;
+    }
+    const dataUrl = await readDataUrl(file);
+    return { kind: "pdf", name: file.name, data: dataUrl.slice(dataUrl.indexOf(",") + 1) };
+  }
+
+  if (["xlsx", "xls"].includes(ext) || file.type.includes("spreadsheet") || file.type.includes("ms-excel")) {
+    const XLSX = await import("xlsx");
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const parts: string[] = [];
+    for (const sheetName of wb.SheetNames.slice(0, 6)) {
+      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]).trim();
+      if (csv) parts.push(`--- sheet: ${sheetName} ---\n${csv}`);
+    }
+    if (parts.length === 0) return null;
+    return { kind: "text", name: file.name, text: truncateText(parts.join("\n\n")) };
+  }
+
+  if (["csv", "tsv", "txt"].includes(ext) || file.type.startsWith("text/")) {
+    const text = (await file.text()).trim();
+    if (!text) return null;
+    return { kind: "text", name: file.name, text: truncateText(text) };
+  }
+
   if (!file.type.startsWith("image/")) return null;
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -53,6 +101,7 @@ async function fileToAttachment(file: File): Promise<Attachment | null> {
     const comma = dataUrl.indexOf(",");
     const meta = dataUrl.slice(0, comma); // data:image/png;base64
     return {
+      kind: "image",
       mediaType: meta.slice(5, meta.indexOf(";")),
       data: dataUrl.slice(comma + 1),
       preview: dataUrl,
@@ -65,7 +114,7 @@ async function fileToAttachment(file: File): Promise<Attachment | null> {
   canvas.height = Math.round(img.height * scale);
   canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
   const out = canvas.toDataURL("image/jpeg", 0.85);
-  return { mediaType: "image/jpeg", data: out.slice(out.indexOf(",") + 1), preview: out };
+  return { kind: "image", mediaType: "image/jpeg", data: out.slice(out.indexOf(",") + 1), preview: out };
 }
 
 // ---------------------------------------------------------------------------
@@ -367,14 +416,18 @@ export default function GenericAgentChat({
     const text = input.trim();
     if ((!text && attachments.length === 0) || loading) return;
     const sending = attachments;
+    const imgs = sending.filter((a): a is Extract<Attachment, { kind: "image" }> => a.kind === "image");
+    const pdfs = sending.filter((a): a is Extract<Attachment, { kind: "pdf" }> => a.kind === "pdf");
+    const txts = sending.filter((a): a is Extract<Attachment, { kind: "text" }> => a.kind === "text");
     setInput("");
     setAttachments([]);
     setMessages((m) => [
       ...m,
       {
         role: "user",
-        content: text || "(screenshot)",
-        images: sending.map((a) => a.preview),
+        content: text || "(attachment)",
+        images: imgs.map((a) => a.preview),
+        files: [...pdfs.map((a) => a.name), ...txts.map((a) => a.name)],
       },
     ]);
     setLoading(true);
@@ -382,7 +435,9 @@ export default function GenericAgentChat({
       const res = await api({
         mode: "chat",
         message: text,
-        images: sending.map((a) => ({ mediaType: a.mediaType, data: a.data })),
+        images: imgs.map((a) => ({ mediaType: a.mediaType, data: a.data })),
+        documents: pdfs.map((a) => ({ name: a.name, data: a.data })),
+        files: txts.map((a) => ({ name: a.name, text: a.text })),
       });
       const data = await res.json().catch(() => ({}));
       const replyText =
@@ -437,6 +492,15 @@ export default function GenericAgentChat({
                     ))}
                   </div>
                 )}
+                {m.files && m.files.length > 0 && (
+                  <div className="mb-1.5 flex flex-wrap gap-1.5">
+                    {m.files.map((f, j) => (
+                      <span key={j} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-0.5 text-[11px] text-slate-600">
+                        📄 {f}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {m.content}
               </div>
             </div>
@@ -483,8 +547,14 @@ export default function GenericAgentChat({
           <div className="mb-2 flex flex-wrap gap-2">
             {attachments.map((a, i) => (
               <div key={i} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.preview} alt="attachment" className="h-14 rounded-md border border-line" />
+                {a.kind === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.preview} alt="attachment" className="h-14 rounded-md border border-line" />
+                ) : (
+                  <span className="inline-flex h-14 items-center gap-1.5 rounded-md border border-line bg-white px-3 text-xs text-slate-600">
+                    📄 {a.kind === "pdf" ? a.name : a.name}
+                  </span>
+                )}
                 <button
                   onClick={() => setAttachments((arr) => arr.filter((_, j) => j !== i))}
                   aria-label="Remove screenshot"
@@ -500,7 +570,7 @@ export default function GenericAgentChat({
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf,.csv,.tsv,.txt,.xls,.xlsx"
             multiple
             className="hidden"
             onChange={(e) => {
@@ -511,8 +581,8 @@ export default function GenericAgentChat({
           <button
             onClick={() => fileRef.current?.click()}
             disabled={loading || attachments.length >= MAX_ATTACHMENTS}
-            title="Attach a screenshot (or paste / drop one)"
-            aria-label="Attach a screenshot"
+            title="Attach a screenshot, spreadsheet (xlsx/csv), or PDF"
+            aria-label="Attach a file"
             className="rounded-lg border border-line bg-paper px-2.5 text-sm text-slate-500 transition-colors hover:border-sky/50 hover:text-slate-800 disabled:opacity-40"
           >
             📎

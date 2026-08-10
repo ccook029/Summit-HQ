@@ -51,6 +51,11 @@ export interface CallClaudeOptions {
    * paste a screenshot of what he's talking about.
    */
   images?: { mediaType: string; data: string }[];
+  /**
+   * PDF documents shown to Claude alongside the user message — base64, no
+   * data: prefix. Claude reads them natively (bank statements, remittances).
+   */
+  documents?: { name: string; data: string }[];
 }
 
 // Anthropic's server-side web search (dynamic filtering) — supported on our
@@ -74,23 +79,36 @@ export async function callClaude(
   const client = getClient();
   const model = opts.model ?? CLAUDE_MODEL;
 
-  // With images attached, the user turn becomes image blocks + a text block.
-  const content: string | Anthropic.Messages.ContentBlockParam[] =
-    opts.images && opts.images.length > 0
-      ? [
-          ...opts.images.map(
-            (img): Anthropic.Messages.ContentBlockParam => ({
-              type: "image",
+  // With attachments, the user turn becomes document/image blocks + text.
+  const hasAttachments =
+    (opts.images?.length ?? 0) > 0 || (opts.documents?.length ?? 0) > 0;
+  const content: string | Anthropic.Messages.ContentBlockParam[] = hasAttachments
+    ? [
+        ...(opts.documents ?? []).map(
+          (doc): Anthropic.Messages.ContentBlockParam =>
+            ({
+              type: "document",
               source: {
                 type: "base64",
-                media_type: img.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data: img.data,
+                media_type: "application/pdf",
+                data: doc.data,
               },
-            })
-          ),
-          { type: "text", text: opts.userMessage },
-        ]
-      : opts.userMessage;
+              title: doc.name,
+            }) as unknown as Anthropic.Messages.ContentBlockParam
+        ),
+        ...(opts.images ?? []).map(
+          (img): Anthropic.Messages.ContentBlockParam => ({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: img.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+              data: img.data,
+            },
+          })
+        ),
+        { type: "text", text: opts.userMessage },
+      ]
+    : opts.userMessage;
 
   const basePayload = {
     model,
