@@ -55,5 +55,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Skip static assets entirely.
-  matcher: ["/((?!_next/static|_next/image|images|favicon.ico|icon|apple-icon).*)"],
+  matcher: ["/((?!_next/static|_next/image|images|brand|favicon.ico|icon|apple-icon).*)"],
 };
