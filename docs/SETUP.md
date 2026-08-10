@@ -14,6 +14,7 @@
 | `ZOHO_CLIENT_ID` / `ZOHO_CLIENT_SECRET` / `ZOHO_REFRESH_TOKEN` / `ZOHO_ORGANIZATION_ID` | for Finance | read-only Zoho Books feed (see §3) |
 | `ZOHO_DOMAIN` / `ZOHO_ACCOUNTS_URL` | optional | default to zohoapis.com / accounts.zoho.com — set to your Zoho data center if different (e.g. `.zoho.eu`) |
 | `ZOHO_BOOKS_MCP_URL` / `ZOHO_BOOKS_MCP_TOKEN` | optional | official Zoho Books MCP server; preferred over REST when set |
+| `SUMMIT_LOCATION_NAME` | optional | name-match for the Summit location in Books (default "summit"); the finance feed pins to it |
 | `GEMINI_API_KEY` | optional | TTS fallback |
 | `ELEVENLABS_API_KEY` | optional | best voices. Must be unrestricted or have **Voices: Read** — a TTS-only scoped key 401s on the voice list |
 | `ELEVENLABS_MODEL` | optional | default `eleven_turbo_v2_5` |

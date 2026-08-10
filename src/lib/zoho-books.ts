@@ -129,6 +129,9 @@ export function txnDirection(t: BooksBankTxn): "in" | "out" | "unknown" {
 }
 
 export interface BooksInvoice {
+  branch_id?: string;
+  branch_name?: string;
+  location_id?: string;
   invoice_id: string;
   invoice_number: string;
   customer_name: string;
@@ -140,6 +143,9 @@ export interface BooksInvoice {
 }
 
 export interface BooksBill {
+  branch_id?: string;
+  branch_name?: string;
+  location_id?: string;
   bill_id: string;
   bill_number: string;
   vendor_name: string;
@@ -198,6 +204,60 @@ async function fetchPageWithTotal<T>(
 
 export const fetchChartOfAccounts = () =>
   getAllPages<BooksAccount>("/chartofaccounts", "chartofaccounts");
+
+// ---- Locations (branches) --------------------------------------------------
+//
+// The Books org belongs to the numbered corporation: Summit is the MAIN
+// location, True North Steelworks the other. Everything financial must be
+// attributable to a location, so the snapshot resolves the Summit location
+// and filters to it wherever Zoho supports it.
+
+export interface BooksLocation {
+  id: string;
+  name: string;
+  isPrimary: boolean;
+}
+
+/** List the org's locations. Newer orgs expose /locations, older /branches. */
+export async function fetchLocations(): Promise<BooksLocation[]> {
+  try {
+    const res = await booksGet<Record<string, unknown>>("/locations");
+    const rows = (res.locations as Record<string, unknown>[]) ?? [];
+    if (rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.location_id ?? r.branch_id ?? ""),
+        name: String(r.location_name ?? r.branch_name ?? ""),
+        isPrimary: Boolean(r.is_primary_location ?? r.is_primary_branch),
+      }));
+    }
+  } catch {
+    /* fall through to /branches */
+  }
+  const res = await booksGet<Record<string, unknown>>("/branches");
+  const rows = (res.branches as Record<string, unknown>[]) ?? [];
+  return rows.map((r) => ({
+    id: String(r.branch_id ?? ""),
+    name: String(r.branch_name ?? ""),
+    isPrimary: Boolean(r.is_primary_branch),
+  }));
+}
+
+/**
+ * The location Summit's numbers live in, or null when locations aren't
+ * enabled / nothing matches. Match by SUMMIT_LOCATION_NAME (default
+ * "summit", case-insensitive substring).
+ */
+export async function resolveSummitLocation(): Promise<BooksLocation | null> {
+  const wanted = (process.env.SUMMIT_LOCATION_NAME ?? "summit").toLowerCase();
+  try {
+    const locations = await fetchLocations();
+    return (
+      locations.find((l) => l.name.toLowerCase().includes(wanted)) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
 
 export interface BooksBankAccount {
   account_id: string;
@@ -363,13 +423,33 @@ export async function fetchBooksSnapshot(): Promise<string> {
     }
   };
 
+  // Pin the snapshot to the Summit location (the org also contains True
+  // North Steelworks). Best-effort: without a resolvable location the
+  // snapshot is org-wide and says so loudly.
+  const summitLoc = await safe("Locations", () => resolveSummitLocation(), null);
+  const locParams: Record<string, string> = summitLoc
+    ? { branch_id: summitLoc.id }
+    : {};
+
   const empty = { items: [], total: 0 };
   const [accounts, uncategorized, invoices, bills] = await Promise.all([
     safe("Chart of Accounts", () => fetchPageWithTotal<BooksAccount>("/chartofaccounts", "chartofaccounts"), empty as { items: BooksAccount[]; total: number }),
     safe("Uncategorized transactions", () => fetchUncategorizedBankTxns(40), empty as { items: BooksBankTxn[]; total: number }),
-    safe("Open invoices (A/R)", () => fetchPageWithTotal<BooksInvoice>("/invoices", "invoices", { status: "unpaid" }), empty as { items: BooksInvoice[]; total: number }),
-    safe("Open bills (A/P)", () => fetchPageWithTotal<BooksBill>("/bills", "bills", { status: "unpaid" }), empty as { items: BooksBill[]; total: number }),
+    safe("Open invoices (A/R)", () => fetchPageWithTotal<BooksInvoice>("/invoices", "invoices", { status: "unpaid", ...locParams }), empty as { items: BooksInvoice[]; total: number }),
+    safe("Open bills (A/P)", () => fetchPageWithTotal<BooksBill>("/bills", "bills", { status: "unpaid", ...locParams }), empty as { items: BooksBill[]; total: number }),
   ]);
+
+  // Belt and suspenders: if rows carry a location/branch tag, drop anything
+  // that isn't Summit's even when the server-side filter didn't apply.
+  const isSummitRow = (r: { branch_id?: string; location_id?: string; branch_name?: string }) => {
+    if (!summitLoc) return true;
+    const tag = r.branch_id ?? r.location_id;
+    if (tag) return String(tag) === summitLoc.id;
+    if (r.branch_name) return r.branch_name.toLowerCase().includes(summitLoc.name.toLowerCase());
+    return true; // untagged row — keep, the header warns about ambiguity
+  };
+  invoices.items = invoices.items.filter(isSummitRow);
+  bills.items = bills.items.filter(isSummitRow);
 
   // If everything failed, surface a clear diagnostic rather than crashing.
   if (
@@ -404,7 +484,10 @@ export async function fetchBooksSnapshot(): Promise<string> {
 
   const lines = [
     "## Zoho Books Snapshot (read-only)",
-    `Chart of Accounts: ${accounts.total} accounts (${inactiveAccounts}+ inactive in sample)`,
+    summitLoc
+      ? `Location filter: **${summitLoc.name}** (the org also contains True North Steelworks — its rows are excluded where Zoho tags them; treat untagged rows as needing location confirmation)`
+      : "⚠️ Location filter: NONE RESOLVED — these figures are ORG-WIDE (Summit + True North Steelworks combined). Attribute before using any number as \"Summit's\".",
+    `Chart of Accounts: ${accounts.total} accounts (${inactiveAccounts}+ inactive in sample) — shared org-wide`,
     `Uncategorized bank transactions: ${uncategorized.total}`,
     `Open invoices (A/R): ${invoices.total} — $${arTotal.toFixed(2)}+ outstanding (sample), ${overdueAR}+ overdue`,
     `Open bills (A/P): ${bills.total} — $${apTotal.toFixed(2)}+ outstanding (sample)`,
