@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------
 import type { Employee } from "./types";
 import { fetchBooksSnapshot } from "../zoho-books";
+import { renderRemittanceCandidates } from "../zoho-mail";
 import { getRecentSignals } from "../signals";
 import { getOwnerQueue } from "./work-orders";
 
@@ -43,14 +44,23 @@ async function renderSignalsBlock(label: string, limit: number): Promise<string>
 }
 
 async function renderFinanceContext(): Promise<string> {
-  const books = await safeBlock(
-    "ZOHO BOOKS SNAPSHOT (cash, A/R, A/P — the live books)",
-    fetchBooksSnapshot()
-  );
+  const [books, remit] = await Promise.all([
+    safeBlock(
+      "ZOHO BOOKS SNAPSHOT (cash, A/R, A/P — the live books)",
+      fetchBooksSnapshot()
+    ),
+    safeBlock(
+      "LIKELY REMITTANCE EMAILS (recent Summit inbox — match against open invoices)",
+      renderRemittanceCandidates(),
+      3500
+    ),
+  ]);
   return [
     "",
     "",
     books,
+    "",
+    remit,
     "",
     "IMPORTANT — CORPORATE STRUCTURE: this Zoho Books organization belongs to the numbered corporation that owns BOTH Summit (the main location) and True North Steelworks (a second location). The snapshot may include both divisions' activity. Attribute every figure to its location; if a transaction's division is ambiguous, flag it rather than guessing; and never present whole-org totals as Summit's numbers. (Location-level filtering will be wired into this feed with the owner — until then, state clearly when a figure might include True North.)",
     "",

@@ -402,6 +402,55 @@ export async function uncategorizeTxn(transactionId: string): Promise<void> {
   await booksPost(`/banktransactions/${transactionId}/uncategorize`, {});
 }
 
+// ---- Payment recording (owner-gated: only the ship executor calls this) ----
+
+export interface InvoiceLookup {
+  invoice_id: string;
+  invoice_number: string;
+  customer_id: string;
+  customer_name: string;
+  status: string;
+  total: number;
+  balance: number;
+}
+
+/** Find an invoice by its exact invoice number. */
+export async function findInvoiceByNumber(
+  invoiceNumber: string
+): Promise<InvoiceLookup | null> {
+  const res = await booksGet<Record<string, unknown>>("/invoices", {
+    invoice_number: invoiceNumber,
+    per_page: "10",
+  });
+  const rows = (res.invoices as (InvoiceLookup & { invoice_number: string })[]) ?? [];
+  return rows.find((r) => r.invoice_number === invoiceNumber) ?? rows[0] ?? null;
+}
+
+/**
+ * Record a customer payment against an invoice (marks it paid when the
+ * amount covers the balance). Requires a write scope
+ * (ZohoBooks.customerpayments.CREATE) on the refresh token.
+ */
+export async function recordCustomerPayment(opts: {
+  customer_id: string;
+  invoice_id: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  payment_mode?: string; // e.g. "banktransfer", "check", "cash"
+  reference_number?: string;
+  branch_id?: string;
+}): Promise<void> {
+  await booksPost("/customerpayments", {
+    customer_id: opts.customer_id,
+    payment_mode: opts.payment_mode ?? "banktransfer",
+    amount: opts.amount,
+    date: opts.date,
+    reference_number: opts.reference_number ?? "",
+    invoices: [{ invoice_id: opts.invoice_id, amount_applied: opts.amount }],
+    ...(opts.branch_id ? { branch_id: opts.branch_id } : {}),
+  });
+}
+
 // ---- Books health snapshot (read-only) ------------------------------------
 
 /**

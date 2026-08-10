@@ -57,13 +57,21 @@ reporting via branches/locations) — to be wired with the owner. Until then
 the department context explicitly warns the finance team that snapshots may
 include True North activity.
 
-## 3b. Zoho Mail (later)
+## 3b. Zoho Mail — remittance pipeline (wired)
 
-Summit also runs email on Zoho. Once linked (Zoho Mail API, same OAuth
-console), the Ops Coordinator and Outreach Writer's drafted ```` ```email ````
-blocks can gain a one-click "send via Zoho Mail" executor — still owner-gated
-in /review. Not wired yet; discuss scopes before granting (send-only vs
-read).
+The Finance team reads the Summit inbox (read-only) for likely remittance
+emails and matches them against open invoices. The Bookkeeper proposes
+matches in a ```` ```payment ```` block, Margot reviews, and when the owner
+approves in /review the ship executor records the customer payments in Zoho
+Books (marking invoices paid) — the hub's only Books write, owner-gated,
+re-verified against the live invoice before posting.
+
+Requires the refresh token to carry the combined scope (the /setup/zoho
+wizard shows it): `ZohoBooks.fullaccess.READ,ZohoBooks.customerpayments.CREATE,ZohoMail.accounts.READ,ZohoMail.messages.READ`.
+Generating a new token and replacing `ZOHO_REFRESH_TOKEN` is all it takes.
+Optional: `ZOHO_MAIL_DOMAIN` when the mail host isn't derivable from
+`ZOHO_ACCOUNTS_URL`. Outbound sending (Ops/BD email executors) remains a
+future, separately-scoped decision.
 
 ## 4. Owner questions still open (blueprint §0)
 

@@ -17,7 +17,8 @@ interface ExchangeResult {
   isDefaultDc: boolean;
 }
 
-const SCOPE = "ZohoBooks.fullaccess.READ";
+const SCOPE =
+  "ZohoBooks.fullaccess.READ,ZohoBooks.customerpayments.CREATE,ZohoMail.accounts.READ,ZohoMail.messages.READ";
 
 export default function ZohoSetupPage() {
   const [clientId, setClientId] = useState("");
@@ -69,8 +70,9 @@ export default function ZohoSetupPage() {
           Connect <span className="text-skydeep">Zoho Books</span>
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          One-time setup. Do the three Zoho steps, paste the results here, and
-          this page hands you the exact values for Vercel.
+          Do the three Zoho steps, paste the results here, and this page hands
+          you the exact values for Vercel. Re-run anytime the scope changes —
+          the new refresh token just replaces the old env value.
         </p>
       </div>
 
