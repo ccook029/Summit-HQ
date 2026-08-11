@@ -50,9 +50,9 @@ async function renderFinanceContext(): Promise<string> {
       fetchBooksSnapshot()
     ),
     safeBlock(
-      "LIKELY REMITTANCE EMAILS (recent Summit inbox — match against open invoices)",
+      "LIKELY REMITTANCE EMAILS (Summit inbox — match against open invoices)",
       renderRemittanceCandidates(),
-      3500
+      8000
     ),
   ]);
   return [
