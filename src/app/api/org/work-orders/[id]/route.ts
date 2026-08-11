@@ -67,8 +67,24 @@ export async function POST(
             { status: 400 }
           );
         }
-        const order = await sendBackWorkOrder(id, body.notes, body.by);
-        return NextResponse.json({ ok: true, order });
+        await sendBackWorkOrder(id, body.notes, body.by);
+        // Sending it back means "go redo this", so it re-runs immediately.
+        // Without this the order parks in "revision" with nobody driving it —
+        // invisible to every queue. If the re-run dies, the work board's Run
+        // button is the fallback, so report the order either way.
+        try {
+          const { order, tokens } = await runWorkOrder(id);
+          return NextResponse.json({ ok: true, order, tokens });
+        } catch (runErr) {
+          return NextResponse.json({
+            ok: true,
+            order: await getWorkOrder(id),
+            warning:
+              runErr instanceof Error
+                ? `Sent back, but the re-run didn't finish: ${runErr.message}. Start it from the work board.`
+                : "Sent back, but the re-run didn't finish. Start it from the work board.",
+          });
+        }
       }
       case "reject": {
         const order = await rejectWorkOrder(id, body.notes, body.by);

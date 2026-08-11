@@ -22,6 +22,12 @@ export default function OwnerNav() {
   return (
     <>
       <Link
+        href="/work"
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+      >
+        Work
+      </Link>
+      <Link
         href="/review"
         className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >

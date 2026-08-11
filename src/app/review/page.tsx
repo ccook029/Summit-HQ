@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { stageOf } from "@/lib/org/stage";
 
 interface WorkRound {
   round: number;
@@ -70,7 +71,7 @@ export default function ReviewPage() {
   const load = useCallback(async () => {
     const [q, err, esc, dir] = await Promise.all([
       fetch("/api/org/work-orders?queue=owner").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/org/work-orders?status=error,in_progress,in_review&limit=20").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/org/work-orders?status=error,in_progress,in_review,revision,queued&limit=20").then((r) => r.json()).catch(() => ({})),
       fetch("/api/org/escalations").then((r) => r.json()).catch(() => ({})),
       fetch("/api/org/directory").then((r) => r.json()).catch(() => ({})),
     ]);
@@ -144,6 +145,12 @@ export default function ReviewPage() {
         </div>
         <div className="flex items-center gap-2">
           <SweepRemittancesButton onDone={load} />
+          <Link
+            href="/work"
+            className="rounded-lg border border-line bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
+          >
+            Work board
+          </Link>
           <Link
             href="/dashboard"
             className="rounded-lg border border-line bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
@@ -633,6 +640,11 @@ function InFlightCard({
     ? Math.round((Date.now() - started.getTime()) / 60000)
     : null;
 
+  // queued/revision can run straight away; the two live states have to be
+  // reset to queued first, which is what "resume" does.
+  const action =
+    order.status === "in_progress" || order.status === "in_review" ? "resume" : "run";
+
   const resume = async () => {
     setBusy(true);
     setNote("Resuming…");
@@ -640,7 +652,7 @@ function InFlightCard({
       const res = await fetch(`/api/org/work-orders/${order.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "resume" }),
+        body: JSON.stringify({ action }),
       });
       const data = await res.json().catch(() => ({}));
       setNote(res.ok ? `Done — status: ${data.order?.status ?? "see queue"}.` : (data.error ?? "Resume failed."));
@@ -658,7 +670,7 @@ function InFlightCard({
         <div>
           <p className="font-medium text-slate-900">{order.title}</p>
           <p className="text-xs text-slate-500">
-            {order.status === "in_review" ? "With the boss for review" : "Drafting"}
+            {stageOf(order.status).label} · {stageOf(order.status).next}
             {minutes !== null ? ` · last activity ${minutes} min ago` : ""}
           </p>
         </div>
