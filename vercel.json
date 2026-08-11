@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/remittance-sweep",
-      "schedule": "0 11 * * *"
+      "schedule": "0 11 * * 1"
     }
   ]
 }

@@ -101,14 +101,16 @@ export async function fetchRecentMessages(limit = 50, start = 1): Promise<MailMe
 
 /**
  * Walk the inbox backwards until messages get older than `days` (or the page
- * cap is hit). Zoho's receivedTime is epoch millis.
+ * cap is hit). `days <= 0` means ALL TIME — walk the whole mailbox.
+ * Zoho's receivedTime is epoch millis.
  */
 export async function fetchMessagesSince(
   days: number,
-  maxPages = 10
+  maxPages = 30
 ): Promise<{ messages: MailMessage[]; exhausted: boolean }> {
   const accountId = await getAccountId();
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const allTime = !Number.isFinite(days) || days <= 0;
+  const cutoff = allTime ? -Infinity : Date.now() - days * 24 * 60 * 60 * 1000;
   const out: MailMessage[] = [];
   let start = 1;
   for (let page = 0; page < maxPages; page++) {
@@ -256,9 +258,14 @@ export async function getRemittanceAttachments(
      * so repeated sweeps advance through the backlog instead of re-reading
      * the newest mail. */
     skipProcessed?: boolean;
+    /** Look but don't record: nothing is written to the processed ledger, so
+     * a "is there anything to do?" check never consumes work. */
+    dryRun?: boolean;
   } = {}
 ): Promise<RemittanceAttachmentBundle> {
-  const days = opts.days ?? Number(process.env.REMITTANCE_SCAN_DAYS ?? 365);
+  // Default: ALL TIME. Set REMITTANCE_SCAN_DAYS to a positive number to
+  // limit the window.
+  const days = opts.days ?? Number(process.env.REMITTANCE_SCAN_DAYS ?? 0);
   const maxDocs = opts.maxDocs ?? 6;
   const maxExtracts = opts.maxExtracts ?? 6;
   const maxImages = opts.maxImages ?? 4;
@@ -269,12 +276,16 @@ export async function getRemittanceAttachments(
   // some listings, which silently hid real attachments. Ask every
   // remittance-like message for its attachment info instead; messages that
   // genuinely have none simply return an empty list.
+  const processedPeek = opts.skipProcessed ? await loadProcessed() : {};
   const candidates = messages
     .filter((m) => REMIT_PATTERN.test(`${m.subject} ${m.summary}`))
+    // Messages fully handled in an earlier sweep are skipped outright — no
+    // per-message API call — so weekly runs stay fast as the ledger grows.
+    .filter((m) => !(opts.skipProcessed && processedPeek[`msg:${m.messageId}`]))
     .sort((a, b) => Number(b.hasAttachment) - Number(a.hasAttachment));
 
   const accountId = await getAccountId();
-  const processed = opts.skipProcessed ? await loadProcessed() : {};
+  const processed = processedPeek;
   const newlyProcessed: Record<string, string> = {};
   const documents: MailAttachmentDoc[] = [];
   const extracts: MailAttachmentText[] = [];
@@ -371,6 +382,9 @@ export async function getRemittanceAttachments(
           notes.push(`skipped ${label} (unsupported type .${ext})`);
         }
       }
+      // Every attachment on this message has now been delivered or noted;
+      // don't spend an API call on it again next sweep.
+      if (opts.skipProcessed) newlyProcessed[`msg:${msg.messageId}`] = stamp;
     } catch (err) {
       notes.push(
         `could not read attachments of "${msg.subject}" (${err instanceof Error ? err.message.slice(0, 80) : "error"})`
@@ -378,13 +392,13 @@ export async function getRemittanceAttachments(
     }
   }
 
-  if (opts.skipProcessed && Object.keys(newlyProcessed).length > 0) {
+  if (opts.skipProcessed && !opts.dryRun && Object.keys(newlyProcessed).length > 0) {
     await saveProcessed({ ...processed, ...newlyProcessed });
   }
 
   const remaining = Math.max(0, candidates.length - messagesChecked);
   const note = [
-    `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"} (given to you as readable documents) plus ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"}, from ${messagesChecked} of ${candidates.length} remittance-like emails in a ~${days}-day window${exhausted ? "" : " (mail page cap hit — older mail exists beyond the scan)"}.`,
+    `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"} (given to you as readable documents) plus ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"}, from ${messagesChecked} of ${candidates.length} unread remittance-like emails. Scan window: ${days > 0 ? `~${days} days` : "ALL TIME (entire mailbox)"}${exhausted ? "" : " — mail page cap hit, even older mail exists beyond the scan"}.`,
     opts.skipProcessed
       ? `${skippedAlreadyRead} attachment(s) were skipped as ALREADY READ in an earlier sweep. ${remaining} remittance-like email(s) remain unchecked — run another sweep to continue through the backlog.`
       : `${remaining} remittance-like email(s) were not checked this round.`,

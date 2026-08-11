@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       await clearProcessedRemittances();
       return NextResponse.json({ ok: true, reset: true, processedRemaining: 0 });
     }
-    const bundle = await getRemittanceAttachments();
+    const bundle = await getRemittanceAttachments({ skipProcessed: true, dryRun: true });
     return NextResponse.json({
       ok: true,
       note: bundle.note,

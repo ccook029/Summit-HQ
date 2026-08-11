@@ -76,7 +76,9 @@ future, separately-scoped decision.
 
 ## 3c. Scheduled remittance sweep
 
-`vercel.json` runs `/api/cron/remittance-sweep` daily at 11:00 UTC (7am ET).
+`vercel.json` runs `/api/cron/remittance-sweep` every **Monday** at 11:00 UTC
+(7am ET). Sweeps cover the **entire mailbox history** by default — set
+`REMITTANCE_SCAN_DAYS` to a positive number to limit the window.
 Each run peeks at the mailbox first: if no unread remittance attachments
 remain it exits without creating a work order — no tokens, no queue noise.
 Otherwise it creates a Bookkeeper order with the standing sweep brief, runs

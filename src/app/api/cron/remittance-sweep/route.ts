@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// GET /api/cron/remittance-sweep — the nightly/automatic remittance sweep.
+// GET /api/cron/remittance-sweep — the weekly (Monday) remittance sweep.
 //
 // Vercel Cron calls this with `Authorization: Bearer $CRON_SECRET` (the
 // middleware lets that bearer through; this route verifies it too).
@@ -27,17 +27,19 @@ export const maxDuration = 300;
 export const SWEEP_BRIEF =
   "Work every remittance email available to you, not just the newest. For EACH one: read its attachments (the PDF/image/spreadsheet carries the payer's invoice references and amounts), find the matching open invoice in the A/R detail table, and confirm payer, amount, and reference agree. " +
   "Put every confident match in ONE `payment` block with its evidence — those are applied to Zoho Books when the owner approves this order. " +
-  "This sweep is INCREMENTAL: attachments you were handed in earlier sweeps are not re-sent, so work what you have now and expect the remaining backlog on the next run. " +
+  "This sweep is INCREMENTAL and covers the WHOLE mailbox history, oldest unread remittances included: attachments handed to you in earlier sweeps are not re-sent, so work what you have now and expect the remaining backlog on the next run. " +
   "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered — quote the coverage line you were given, including how many emails remain unchecked. Never guess an invoice number.";
 
 async function runSweep(trigger: string) {
-  // Peek first — skipProcessed:false so this check never consumes the ledger.
+  // Peek first: dryRun means nothing is recorded as read, so this check
+  // never consumes work the sweep itself should do.
   const peek = await getRemittanceAttachments({
     maxDocs: 1,
     maxExtracts: 1,
     maxImages: 1,
     maxMessages: 60,
     skipProcessed: true,
+    dryRun: true,
   }).catch(() => null);
 
   const found =
@@ -55,7 +57,7 @@ async function runSweep(trigger: string) {
   const order = await createWorkOrder({
     departmentId: "finance",
     assigneeId: "bookkeeper",
-    title: `Remittance sweep — ${new Date().toISOString().slice(0, 10)}`,
+    title: `Weekly remittance sweep — ${new Date().toISOString().slice(0, 10)}`,
     brief: SWEEP_BRIEF,
     deliverableType: "remittance-match",
     createdBy: trigger,
