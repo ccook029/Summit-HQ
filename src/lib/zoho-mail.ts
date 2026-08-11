@@ -42,6 +42,7 @@ export interface MailMessage {
   from: string;
   receivedTime: string; // ISO-ish
   summary: string;
+  hasAttachment: boolean;
 }
 
 interface RawMessage {
@@ -52,6 +53,7 @@ interface RawMessage {
   sender?: string;
   receivedTime?: string | number;
   summary?: string;
+  hasAttachment?: string | number | boolean;
 }
 
 /** The primary Mail account id (first account on the token's user). */
@@ -70,7 +72,21 @@ function toMessage(m: RawMessage): MailMessage {
     from: m.fromAddress ?? m.sender ?? "",
     receivedTime: String(m.receivedTime ?? ""),
     summary: m.summary ?? "",
+    hasAttachment:
+      m.hasAttachment === true || m.hasAttachment === "1" || m.hasAttachment === 1,
   };
+}
+
+async function mailGetBinary(path: string): Promise<ArrayBuffer> {
+  const token = await getAccessToken();
+  const res = await fetch(`${mailDomain()}/api${path}`, {
+    headers: { Authorization: `Zoho-oauthtoken ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) await invalidateTokenCache();
+    throw new Error(`Zoho Mail ${path} failed (${res.status})`);
+  }
+  return res.arrayBuffer();
 }
 
 /** Latest inbox messages (metadata only), single page. */
@@ -142,6 +158,113 @@ export async function renderRemittanceCandidates(
       (m) => `- [${fmt(m.receivedTime)}] FROM ${m.from} — "${m.subject}" — ${m.summary.slice(0, 160)}`
     ),
   ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Remittance attachments — the actual payment detail usually lives in a PDF
+// or spreadsheet attached to the remittance email, not in its body. This
+// pulls attachments off the remittance-like messages: PDFs come back as
+// base64 documents (Claude reads them natively), CSV/XLSX/TXT come back as
+// extracted text. Everything is capped so a prompt can carry it.
+// ---------------------------------------------------------------------------
+
+export interface MailAttachmentDoc {
+  name: string;
+  data: string; // base64 PDF
+}
+export interface MailAttachmentText {
+  name: string;
+  text: string;
+}
+export interface RemittanceAttachmentBundle {
+  documents: MailAttachmentDoc[];
+  extracts: MailAttachmentText[];
+  note: string;
+}
+
+interface AttachmentInfo {
+  attachmentId?: string | number;
+  attachmentName?: string;
+  attachmentSize?: string | number;
+}
+
+const MAX_PDF_BYTES = 2_500_000;
+const MAX_EXTRACT_CHARS = 20_000;
+
+export async function getRemittanceAttachments(
+  opts: { days?: number; maxDocs?: number; maxExtracts?: number; maxMessages?: number } = {}
+): Promise<RemittanceAttachmentBundle> {
+  const days = opts.days ?? 90;
+  const maxDocs = opts.maxDocs ?? 3;
+  const maxExtracts = opts.maxExtracts ?? 4;
+  const maxMessages = opts.maxMessages ?? 8;
+
+  const { messages } = await fetchMessagesSince(days);
+  const candidates = messages
+    .filter((m) => m.hasAttachment && REMIT_PATTERN.test(`${m.subject} ${m.summary}`))
+    .slice(0, maxMessages);
+
+  const accountId = await getAccountId();
+  const documents: MailAttachmentDoc[] = [];
+  const extracts: MailAttachmentText[] = [];
+  const notes: string[] = [];
+
+  const fmt = (ms: string) => {
+    const t = Number(ms);
+    return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : ms;
+  };
+
+  for (const msg of candidates) {
+    if (documents.length >= maxDocs && extracts.length >= maxExtracts) break;
+    try {
+      const info = await mailGet<{ data?: { attachments?: AttachmentInfo[] } }>(
+        `/accounts/${accountId}/folders/${msg.folderId}/messages/${msg.messageId}/attachmentinfo`
+      );
+      for (const a of info.data?.attachments ?? []) {
+        const name = a.attachmentName ?? "attachment";
+        const label = `${fmt(msg.receivedTime)} · ${msg.from} · ${name}`;
+        const ext = name.toLowerCase().split(".").pop() ?? "";
+        const size = Number(a.attachmentSize ?? 0);
+        const path = `/accounts/${accountId}/folders/${msg.folderId}/messages/${msg.messageId}/attachments/${a.attachmentId}`;
+
+        if (ext === "pdf") {
+          if (documents.length >= maxDocs) continue;
+          if (size > MAX_PDF_BYTES) {
+            notes.push(`skipped ${label} (PDF over 2.5MB)`);
+            continue;
+          }
+          const buf = await mailGetBinary(path);
+          documents.push({ name: label, data: Buffer.from(buf).toString("base64") });
+        } else if (["csv", "tsv", "txt"].includes(ext)) {
+          if (extracts.length >= maxExtracts) continue;
+          const buf = await mailGetBinary(path);
+          const text = new TextDecoder().decode(buf).slice(0, MAX_EXTRACT_CHARS);
+          if (text.trim()) extracts.push({ name: label, text });
+        } else if (["xlsx", "xls"].includes(ext)) {
+          if (extracts.length >= maxExtracts) continue;
+          const buf = await mailGetBinary(path);
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(buf, { type: "array" });
+          const parts: string[] = [];
+          for (const sheetName of wb.SheetNames.slice(0, 4)) {
+            const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]).trim();
+            if (csv) parts.push(`--- sheet: ${sheetName} ---\n${csv}`);
+          }
+          const text = parts.join("\n\n").slice(0, MAX_EXTRACT_CHARS);
+          if (text.trim()) extracts.push({ name: label, text });
+        } else {
+          notes.push(`skipped ${label} (unsupported type .${ext})`);
+        }
+      }
+    } catch (err) {
+      notes.push(
+        `could not read attachments of "${msg.subject}" (${err instanceof Error ? err.message.slice(0, 80) : "error"})`
+      );
+    }
+  }
+
+  const note = `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} (provided to you as readable documents) and ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"} from ${candidates.length} remittance-like emails with attachments.${notes.length ? ` Notes: ${notes.join("; ")}.` : ""}`;
+  return { documents, extracts, note };
 }
 
 export function mailConfigured(): boolean {

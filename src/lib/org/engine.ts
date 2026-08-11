@@ -18,6 +18,7 @@
 // work orders instead of fire-and-forget emails.
 // ---------------------------------------------------------------------------
 import { callClaude } from "../anthropic";
+import { getRemittanceAttachments } from "../zoho-mail";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "../models";
 import { renderOrgKnowledge } from "../org-knowledge";
 import { renderCrossAgentSignals } from "../cross-agent";
@@ -312,7 +313,22 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
 
   try {
     const workerSystem = await buildWorkerSystemPrompt(employee, department);
-    const policyBlock = await renderPolicyBlock(department.id, department.name);
+    let policyBlock = await renderPolicyBlock(department.id, department.name);
+
+    // Finance orders carry the remittance attachments: PDFs as native
+    // documents, spreadsheets/CSVs as text — the same evidence in front of
+    // BOTH the worker and the reviewing boss.
+    let attachmentDocs: { name: string; data: string }[] = [];
+    if (department.id === "finance") {
+      const bundle = await getRemittanceAttachments().catch(() => null);
+      if (bundle) {
+        attachmentDocs = bundle.documents;
+        const extractBlock = bundle.extracts
+          .map((e) => `### Attachment: ${e.name}\n\`\`\`\n${e.text}\n\`\`\``)
+          .join("\n\n");
+        policyBlock += `\n\n## Remittance email attachments\n${bundle.note}${extractBlock ? `\n\n${extractBlock}` : ""}`;
+      }
+    }
 
     let roundNumber = order.rounds.length;
     let verdictReached = false;
@@ -334,6 +350,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
         maxTokens: 8192,
         temperature: 0.4,
         webSearch: profile?.research,
+        documents: attachmentDocs,
       });
       tokens.input += workerRes.inputTokens;
       tokens.output += workerRes.outputTokens;
@@ -387,6 +404,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
         model: reviewer.model ?? CLAUDE_MANAGER_MODEL,
         maxTokens: 4096,
         temperature: 0.2,
+        documents: attachmentDocs,
       });
       tokens.input += reviewRes.inputTokens;
       tokens.output += reviewRes.outputTokens;

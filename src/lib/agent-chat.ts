@@ -15,6 +15,7 @@ import { callClaude } from "./anthropic";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "./models";
 import { getRunLogsByAgent } from "./store";
 import { renderOrgKnowledge } from "./org-knowledge";
+import { getRemittanceAttachments } from "./zoho-mail";
 import { renderCrossAgentSignals } from "./cross-agent";
 import { loadAgentChat, appendAgentChat } from "./agent-chat-store";
 import {
@@ -166,6 +167,21 @@ export async function runAgentConversation(
     (await renderOrgKnowledge().catch(() => "")) +
     (await renderCrossAgentSignals(agentId).catch(() => ""));
 
+  // Finance chats carry the remittance email attachments (PDFs as readable
+  // documents, sheets as text) so "read the attachment" just works.
+  let mailDocs: ChatDocument[] = [];
+  let mailExtractBlock = "";
+  if (employee.departmentId === "finance") {
+    const bundle = await getRemittanceAttachments({ maxDocs: 2, maxExtracts: 3 }).catch(() => null);
+    if (bundle) {
+      mailDocs = bundle.documents.map((d) => ({ name: d.name, data: d.data }));
+      const extracts = bundle.extracts
+        .map((e) => `### Attachment: ${e.name}\n\`\`\`\n${e.text}\n\`\`\``)
+        .join("\n\n");
+      mailExtractBlock = `\n\n## Remittance email attachments\n${bundle.note}${extracts ? `\n\n${extracts}` : ""}`;
+    }
+  }
+
   // Org grounding: live department data, own work orders, and — for bosses —
   // everything the team has produced lately.
   let orgBlocks = "";
@@ -192,6 +208,8 @@ export async function runAgentConversation(
   const docNote = documents.length
     ? `\n\nThey attached ${documents.length} PDF${documents.length > 1 ? "s" : ""} (provided above the text) — read ${documents.length > 1 ? "them" : "it"} carefully.`
     : "";
+  if (mailExtractBlock) orgBlocks += mailExtractBlock;
+
   const fileBlock = textFiles.length
     ? `\n\n## Attached files (extracted contents)\n${textFiles
         .map((f) => `### ${f.name}\n\`\`\`\n${f.text}\n\`\`\``)
@@ -214,10 +232,10 @@ ${message}`;
     systemPrompt,
     userMessage,
     model,
-    maxTokens: isManager ? 6144 : 6144,
+    maxTokens: 6144,
     temperature: 0.4,
     images,
-    documents,
+    documents: [...mailDocs, ...documents],
   });
   // Rarely the API 200s with no text (observed in production as a ghost
   // bubble). Retry once; if it's still empty, fail loudly so the UI shows a
@@ -233,7 +251,7 @@ ${message}`;
       maxTokens: 8192,
       temperature: 0.4,
       images,
-      documents,
+      documents: [...mailDocs, ...documents],
     });
     if (!res.text.trim()) {
       throw new Error(`${name} came back empty twice (model ${model}, stop_reason ${res.stopReason ?? "unknown"}, ${res.outputTokens} output tokens). If stop_reason is max_tokens the reply budget is still too small — tell Claude.`);
