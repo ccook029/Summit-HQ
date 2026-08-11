@@ -28,7 +28,9 @@ export const SWEEP_BRIEF =
   "Work every remittance email available to you, not just the newest. For EACH one: read its attachments (the PDF/image/spreadsheet carries the payer's invoice references and amounts), find the matching open invoice in the A/R detail table, and confirm payer, amount, and reference agree. " +
   "Put every confident match in ONE `payment` block with its evidence — those are applied to Zoho Books when the owner approves this order. " +
   "This sweep is INCREMENTAL and covers the WHOLE mailbox history, oldest unread remittances included: attachments handed to you in earlier sweeps are not re-sent, so work what you have now and expect the remaining backlog on the next run. " +
-  "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered — quote the coverage line you were given, including how many emails remain unchecked. Never guess an invoice number.";
+  "THE POINT OF THIS JOB is clearing OPEN invoices. Old mail whose invoice was already settled, and vendor bills addressed to Summit, are EXPECTED to yield nothing — give each a single line and move on; do not write long analyses of them. " +
+  "Keep the deliverable short when there is nothing to apply: state the empty payment block, list in one line each what you looked at and why it did not match, then (a) anything you could not match that LOOKS like it should have, (b) any amount that disagrees with an invoice balance, and (c) the coverage line you were given, including how many emails remain unchecked. Never guess an invoice number. " +
+  "If, after reading, some OPEN invoices look paid but you have no remittance for them, list those invoice numbers — that tells the owner where to look next.";
 
 async function runSweep(trigger: string) {
   // Peek first: dryRun means nothing is recorded as read, so this check

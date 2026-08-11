@@ -133,6 +133,26 @@ export async function fetchMessagesSince(
 const REMIT_PATTERN =
   /remit|payment|paid|e-?transfer|etransfer|eft|wire|deposit|invoice|cheque|check\b/i;
 
+// Subjects/senders that match REMIT_PATTERN but are never customer
+// remittances — subscription receipts, food delivery, domain renewals.
+// Without this they eat whole batches.
+const NOISE_PATTERN =
+  /uber|doordash|skip ?the ?dishes|godaddy|renewal|subscription|receipt from|your order|newsletter|unsubscribe|password|verification code|statement is ready/i;
+
+function isRemittanceLike(m: MailMessage): boolean {
+  const hay = `${m.subject} ${m.summary} ${m.from}`;
+  return REMIT_PATTERN.test(hay) && !NOISE_PATTERN.test(hay);
+}
+
+/** Does this message mention something we're actually trying to clear? */
+function focusScore(m: MailMessage, focusTerms: string[]): number {
+  if (focusTerms.length === 0) return 0;
+  const hay = `${m.subject} ${m.summary} ${m.from}`.toLowerCase();
+  let score = 0;
+  for (const t of focusTerms) if (t && hay.includes(t)) score++;
+  return score;
+}
+
 /**
  * Likely remittance emails, rendered for prompt injection with an explicit
  * coverage statement (what window was scanned, what was found, what was
@@ -145,9 +165,7 @@ export async function renderRemittanceCandidates(
   const days = opts.days ?? Number(process.env.REMITTANCE_SCAN_DAYS ?? 0);
   const max = opts.max ?? 80;
   const { messages, exhausted } = await fetchMessagesSince(days);
-  const candidates = messages.filter((m) =>
-    REMIT_PATTERN.test(`${m.subject} ${m.summary}`)
-  );
+  const candidates = messages.filter(isRemittanceLike);
   const shown = candidates.slice(0, max);
   const fmt = (ms: string) => {
     const t = Number(ms);
@@ -254,6 +272,10 @@ export async function getRemittanceAttachments(
     maxExtracts?: number;
     maxImages?: number;
     maxMessages?: number;
+    /** Lower-cased customer names / invoice numbers currently OPEN in A/R.
+     * Mail naming one of these is worked first — that's the mail that can
+     * actually clear something. */
+    focusTerms?: string[];
     /** Skip attachments already handed to an employee in a previous sweep,
      * so repeated sweeps advance through the backlog instead of re-reading
      * the newest mail. */
@@ -277,18 +299,25 @@ export async function getRemittanceAttachments(
   // remittance-like message for its attachment info instead; messages that
   // genuinely have none simply return an empty list.
   const processedPeek = opts.skipProcessed ? await loadProcessed() : {};
+  const focusTerms = (opts.focusTerms ?? []).map((t) => t.toLowerCase());
   const candidates = messages
-    .filter((m) => REMIT_PATTERN.test(`${m.subject} ${m.summary}`))
+    .filter(isRemittanceLike)
     // Messages fully handled in an earlier sweep are skipped outright — no
     // per-message API call — so weekly runs stay fast as the ledger grows.
     .filter((m) => !(opts.skipProcessed && processedPeek[`msg:${m.messageId}`]))
-    // Oldest first: a backlog clean-up should drain history in order rather
-    // than re-reading the front of the mailbox every run.
+    // Priority: mail naming an OPEN invoice or its customer (that's what can
+    // actually be cleared), then mail with attachments, then oldest first so
+    // history still drains.
     .sort((a, b) => {
+      const focus = focusScore(b, focusTerms) - focusScore(a, focusTerms);
+      if (focus !== 0) return focus;
       const flag = Number(b.hasAttachment) - Number(a.hasAttachment);
       if (flag !== 0) return flag;
       return Number(a.receivedTime) - Number(b.receivedTime);
     });
+  const focusedCount = focusTerms.length
+    ? candidates.filter((m) => focusScore(m, focusTerms) > 0).length
+    : 0;
 
   const accountId = await getAccountId();
   const processed = processedPeek;
@@ -405,6 +434,9 @@ export async function getRemittanceAttachments(
   const remaining = Math.max(0, candidates.length - messagesChecked);
   const note = [
     `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"} (given to you as readable documents) plus ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"}, from ${messagesChecked} of ${candidates.length} unread remittance-like emails. Scan window: ${days > 0 ? `~${days} days` : "ALL TIME (entire mailbox)"}${exhausted ? "" : " — mail page cap hit, even older mail exists beyond the scan"}.`,
+    focusTerms.length
+      ? `${focusedCount} of the unread remittance-like emails name a customer or invoice number CURRENTLY OPEN in A/R — those were prioritised. Mail matching none of them usually concerns invoices already settled (nothing to clear) or vendor bills; note it in one line and move on rather than analysing it at length.`
+      : "",
     opts.skipProcessed
       ? `${skippedAlreadyRead} attachment(s) were skipped as ALREADY READ in an earlier sweep. ${remaining} remittance-like email(s) remain unchecked — run another sweep to continue through the backlog.`
       : `${remaining} remittance-like email(s) were not checked this round.`,

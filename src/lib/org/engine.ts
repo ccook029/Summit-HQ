@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------------------
 import { callClaude } from "../anthropic";
 import { getRemittanceAttachments } from "../zoho-mail";
+import { fetchAllOpenInvoices } from "../zoho-books";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "../models";
 import { renderOrgKnowledge } from "../org-knowledge";
 import { renderCrossAgentSignals } from "../cross-agent";
@@ -323,12 +324,27 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
     if (department.id === "finance") {
       // skipProcessed: each sweep advances through the backlog instead of
       // re-reading the newest mail every time.
+      // Focus the sweep on mail that could actually clear something: the
+      // customers and invoice numbers currently OPEN in A/R.
+      const openAr = await fetchAllOpenInvoices().catch(() => null);
+      const focusTerms = openAr
+        ? Array.from(
+            new Set(
+              openAr.items.flatMap((i) =>
+                [i.customer_name, i.invoice_number].filter(
+                  (t): t is string => typeof t === "string" && t.length > 2
+                )
+              )
+            )
+          )
+        : [];
       const bundle = await getRemittanceAttachments({
         maxDocs: 10,
         maxExtracts: 10,
         maxImages: 6,
         maxMessages: 60,
         skipProcessed: true,
+        focusTerms,
       }).catch(() => null);
       if (bundle) {
         attachmentDocs = bundle.documents;
