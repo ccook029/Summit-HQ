@@ -539,22 +539,41 @@ function SweepRemittancesButton({ onDone }: { onDone: () => Promise<void> }) {
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
+  // Backlog mode: keep firing sweeps until the mailbox reports nothing left
+  // to read. Each round is its own work order (one prompt's worth of
+  // attachments), so this drains history without hitting the function cap.
   const run = async () => {
     setRunning(true);
-    setNote("Reading remittances and matching invoices…");
+    let round = 0;
+    let created = 0;
     try {
-      const res = await fetch("/api/cron/remittance-sweep", { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
-        setNote(data.error ?? "Sweep failed.");
-      } else if (data.ran === false) {
-        setNote(data.reason ?? "Nothing new to sweep.");
-      } else {
+      for (; round < 12; round++) {
         setNote(
-          data.status === "approved"
-            ? "Done — the Controller approved it; it's in your queue below."
-            : `Done — status: ${data.status ?? "see queue"}.`
+          round === 0
+            ? "Reading remittances and matching invoices…"
+            : `Round ${round + 1} — working back through older mail (${created} batch${created === 1 ? "" : "es"} queued so far)…`
         );
+        const res = await fetch("/api/cron/remittance-sweep", { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          setNote(data.error ?? "Sweep failed.");
+          break;
+        }
+        if (data.ran === false) {
+          setNote(
+            created === 0
+              ? (data.reason ?? "Nothing new to sweep.")
+              : `Backlog clear — ${created} batch${created === 1 ? "" : "es"} processed. Review them below.`
+          );
+          break;
+        }
+        created++;
+        await onDone();
+        if (round === 11) {
+          setNote(
+            `${created} batches processed — more mail remains, run it again to continue.`
+          );
+        }
       }
       await onDone();
     } catch {
@@ -570,7 +589,7 @@ function SweepRemittancesButton({ onDone }: { onDone: () => Promise<void> }) {
       <button
         onClick={run}
         disabled={running}
-        title="Read every remittance email, match against open invoices, and route the matches here for approval"
+        title="Work back through every unread remittance email — oldest first — matching them against open invoices and routing the matches here for approval"
         className="rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-50"
       >
         {running ? "Sweeping…" : "Sweep remittances"}

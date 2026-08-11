@@ -142,8 +142,8 @@ const REMIT_PATTERN =
 export async function renderRemittanceCandidates(
   opts: { days?: number; max?: number } = {}
 ): Promise<string> {
-  const days = opts.days ?? 90;
-  const max = opts.max ?? 40;
+  const days = opts.days ?? Number(process.env.REMITTANCE_SCAN_DAYS ?? 0);
+  const max = opts.max ?? 80;
   const { messages, exhausted } = await fetchMessagesSince(days);
   const candidates = messages.filter((m) =>
     REMIT_PATTERN.test(`${m.subject} ${m.summary}`)
@@ -153,7 +153,7 @@ export async function renderRemittanceCandidates(
     const t = Number(ms);
     return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : ms;
   };
-  const coverage = `COVERAGE: scanned ${messages.length} inbox messages over the last ~${days} days${exhausted ? "" : " (page cap hit — older mail exists beyond this scan)"}; ${candidates.length} look remittance-like; showing ${shown.length}. Mail older than this window is NOT in this list — say so rather than concluding it doesn't exist.`;
+  const coverage = `COVERAGE: scanned ${messages.length} messages (${days > 0 ? `last ~${days} days` : "ALL TIME — entire mailbox"})${exhausted ? "" : "; page cap hit, even older mail exists beyond this scan"}; ${candidates.length} look remittance-like; showing ${shown.length}. Anything not in this list was not seen — say so rather than concluding it doesn't exist.`;
   if (shown.length === 0) return `${coverage}\n(no likely remittance emails found in that window)`;
   return [
     coverage,
@@ -282,7 +282,13 @@ export async function getRemittanceAttachments(
     // Messages fully handled in an earlier sweep are skipped outright — no
     // per-message API call — so weekly runs stay fast as the ledger grows.
     .filter((m) => !(opts.skipProcessed && processedPeek[`msg:${m.messageId}`]))
-    .sort((a, b) => Number(b.hasAttachment) - Number(a.hasAttachment));
+    // Oldest first: a backlog clean-up should drain history in order rather
+    // than re-reading the front of the mailbox every run.
+    .sort((a, b) => {
+      const flag = Number(b.hasAttachment) - Number(a.hasAttachment);
+      if (flag !== 0) return flag;
+      return Number(a.receivedTime) - Number(b.receivedTime);
+    });
 
   const accountId = await getAccountId();
   const processed = processedPeek;
