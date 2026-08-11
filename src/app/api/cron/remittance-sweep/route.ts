@@ -1,0 +1,103 @@
+// ---------------------------------------------------------------------------
+// GET /api/cron/remittance-sweep — the nightly/automatic remittance sweep.
+//
+// Vercel Cron calls this with `Authorization: Bearer $CRON_SECRET` (the
+// middleware lets that bearer through; this route verifies it too).
+//
+// Behaviour:
+//   1. Peek at the mailbox WITHOUT consuming the processed ledger. If there
+//      is nothing new to read, do nothing — no work order, no tokens burned,
+//      no noise in the owner's queue.
+//   2. Otherwise create a Bookkeeper work order with the standing sweep brief
+//      and run the full worker → Controller review cycle. Whatever the
+//      Controller approves lands in /review, where the owner's approval is
+//      still what records payments in Zoho Books.
+//
+// Manual trigger (same behaviour) is a POST from a signed-in session.
+// ---------------------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { createWorkOrder } from "@/lib/org/work-orders";
+import { runWorkOrder } from "@/lib/org/engine";
+import { getRemittanceAttachments } from "@/lib/zoho-mail";
+import { postSignal } from "@/lib/signals";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
+export const SWEEP_BRIEF =
+  "Work every remittance email available to you, not just the newest. For EACH one: read its attachments (the PDF/image/spreadsheet carries the payer's invoice references and amounts), find the matching open invoice in the A/R detail table, and confirm payer, amount, and reference agree. " +
+  "Put every confident match in ONE `payment` block with its evidence — those are applied to Zoho Books when the owner approves this order. " +
+  "This sweep is INCREMENTAL: attachments you were handed in earlier sweeps are not re-sent, so work what you have now and expect the remaining backlog on the next run. " +
+  "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered — quote the coverage line you were given, including how many emails remain unchecked. Never guess an invoice number.";
+
+async function runSweep(trigger: string) {
+  // Peek first — skipProcessed:false so this check never consumes the ledger.
+  const peek = await getRemittanceAttachments({
+    maxDocs: 1,
+    maxExtracts: 1,
+    maxImages: 1,
+    maxMessages: 60,
+    skipProcessed: true,
+  }).catch(() => null);
+
+  const found =
+    (peek?.documents.length ?? 0) +
+    (peek?.images.length ?? 0) +
+    (peek?.extracts.length ?? 0);
+
+  if (!peek) {
+    return { ran: false, reason: "Mailbox unreachable this run." };
+  }
+  if (found === 0) {
+    return { ran: false, reason: "Nothing new in the mailbox — no work order created." };
+  }
+
+  const order = await createWorkOrder({
+    departmentId: "finance",
+    assigneeId: "bookkeeper",
+    title: `Remittance sweep — ${new Date().toISOString().slice(0, 10)}`,
+    brief: SWEEP_BRIEF,
+    deliverableType: "remittance-match",
+    createdBy: trigger,
+  });
+
+  const { order: done } = await runWorkOrder(order.id);
+
+  await postSignal({
+    source: "finance",
+    headline:
+      done.status === "approved"
+        ? `Remittance sweep finished — awaiting your approval in Review.`
+        : `Remittance sweep finished with status "${done.status}".`,
+  }).catch(() => {});
+
+  return { ran: true, orderId: done.id, status: done.status };
+}
+
+export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const auth = request.headers.get("authorization");
+  if (secret && auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    return NextResponse.json({ ok: true, ...(await runSweep("Scheduled sweep")) });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
+  }
+}
+
+/** Manual "run it now" from a signed-in session (the middleware guards this). */
+export async function POST() {
+  try {
+    return NextResponse.json({ ok: true, ...(await runSweep("Manual sweep")) });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
+  }
+}

@@ -19,7 +19,7 @@
 | `GEMINI_API_KEY` | optional | TTS fallback |
 | `ELEVENLABS_API_KEY` | optional | best voices. Must be unrestricted or have **Voices: Read** — a TTS-only scoped key 401s on the voice list |
 | `ELEVENLABS_MODEL` | optional | default `eleven_turbo_v2_5` |
-| `CRON_SECRET` | later | only when scheduled runs are added |
+| `CRON_SECRET` | **for the daily sweep** | any long random string; Vercel Cron sends it as a bearer token to `/api/cron/remittance-sweep`. Without it the endpoint is open to anyone who can reach the deployment. |
 | `MODULES_SHARED_KEY` | later | only if external tools push signals into `/api/signals` |
 
 Env-var changes only take effect on the **next** deployment. "Redeploy" on an
@@ -73,6 +73,20 @@ Generating a new token and replacing `ZOHO_REFRESH_TOKEN` is all it takes.
 Optional: `ZOHO_MAIL_DOMAIN` when the mail host isn't derivable from
 `ZOHO_ACCOUNTS_URL`. Outbound sending (Ops/BD email executors) remains a
 future, separately-scoped decision.
+
+## 3c. Scheduled remittance sweep
+
+`vercel.json` runs `/api/cron/remittance-sweep` daily at 11:00 UTC (7am ET).
+Each run peeks at the mailbox first: if no unread remittance attachments
+remain it exits without creating a work order — no tokens, no queue noise.
+Otherwise it creates a Bookkeeper order with the standing sweep brief, runs
+the worker → Controller cycle, and posts a signal. Approving in `/review` is
+still the only thing that records payments in Zoho Books.
+
+Set `CRON_SECRET` in Vercel so the endpoint isn't publicly callable. The
+"Sweep remittances" button in `/review` POSTs the same endpoint, so manual
+and scheduled runs behave identically. Sweeps are incremental (see §3b);
+`/api/health/remittance?reset=1` clears the read-ledger for a full re-run.
 
 ## 4. Owner questions still open (blueprint §0)
 

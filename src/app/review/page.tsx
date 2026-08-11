@@ -543,30 +543,17 @@ function SweepRemittancesButton({ onDone }: { onDone: () => Promise<void> }) {
     setRunning(true);
     setNote("Reading remittances and matching invoices…");
     try {
-      const res = await fetch("/api/org/work-orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assigneeId: "bookkeeper",
-          title: "Remittance sweep — clear paid invoices",
-          deliverableType: "remittance-match",
-          createdBy: "Chris Cook (Review)",
-          run: true,
-          brief:
-            "Work every remittance email available to you, not just the newest. For EACH one: read its attachments (the PDF/spreadsheet carries the payer's invoice references and amounts), find the matching open invoice in the A/R detail table, and confirm payer, amount, and reference agree. " +
-            "Put every confident match in ONE `payment` block with its evidence — those are applied to Zoho Books when the owner approves this order. " +
-            "This sweep is INCREMENTAL: attachments you were handed in earlier sweeps are not re-sent, so work what you have now and expect the remaining backlog on the next run. " +
-            "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered — quote the coverage line you were given, including how many emails remain unchecked. Never guess an invoice number.",
-        }),
-      });
+      const res = await fetch("/api/cron/remittance-sweep", { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (!res.ok || data.ok === false) {
         setNote(data.error ?? "Sweep failed.");
+      } else if (data.ran === false) {
+        setNote(data.reason ?? "Nothing new to sweep.");
       } else {
         setNote(
-          data.order?.status === "approved"
+          data.status === "approved"
             ? "Done — the Controller approved it; it's in your queue below."
-            : `Done — status: ${data.order?.status ?? "see queue"}.`
+            : `Done — status: ${data.status ?? "see queue"}.`
         );
       }
       await onDone();
