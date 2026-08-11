@@ -319,10 +319,20 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
     // documents, spreadsheets/CSVs as text — the same evidence in front of
     // BOTH the worker and the reviewing boss.
     let attachmentDocs: { name: string; data: string }[] = [];
+    let attachmentImages: { mediaType: string; data: string }[] = [];
     if (department.id === "finance") {
-      const bundle = await getRemittanceAttachments({ maxDocs: 8, maxExtracts: 8, maxMessages: 24 }).catch(() => null);
+      // skipProcessed: each sweep advances through the backlog instead of
+      // re-reading the newest mail every time.
+      const bundle = await getRemittanceAttachments({
+        maxDocs: 10,
+        maxExtracts: 10,
+        maxImages: 6,
+        maxMessages: 60,
+        skipProcessed: true,
+      }).catch(() => null);
       if (bundle) {
         attachmentDocs = bundle.documents;
+        attachmentImages = bundle.images.map((i) => ({ mediaType: i.mediaType, data: i.data }));
         const extractBlock = bundle.extracts
           .map((e) => `### Attachment: ${e.name}\n\`\`\`\n${e.text}\n\`\`\``)
           .join("\n\n");
@@ -351,6 +361,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
         temperature: 0.4,
         webSearch: profile?.research,
         documents: attachmentDocs,
+        images: attachmentImages,
       });
       tokens.input += workerRes.inputTokens;
       tokens.output += workerRes.outputTokens;
@@ -405,6 +416,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
         maxTokens: 4096,
         temperature: 0.2,
         documents: attachmentDocs,
+        images: attachmentImages,
       });
       tokens.input += reviewRes.inputTokens;
       tokens.output += reviewRes.outputTokens;

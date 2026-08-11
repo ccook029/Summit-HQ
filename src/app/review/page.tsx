@@ -555,7 +555,8 @@ function SweepRemittancesButton({ onDone }: { onDone: () => Promise<void> }) {
           brief:
             "Work every remittance email available to you, not just the newest. For EACH one: read its attachments (the PDF/spreadsheet carries the payer's invoice references and amounts), find the matching open invoice in the A/R detail table, and confirm payer, amount, and reference agree. " +
             "Put every confident match in ONE `payment` block with its evidence — those are applied to Zoho Books when the owner approves this order. " +
-            "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered, so a second sweep can pick up the rest. Never guess an invoice number.",
+            "This sweep is INCREMENTAL: attachments you were handed in earlier sweeps are not re-sent, so work what you have now and expect the remaining backlog on the next run. " +
+            "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered — quote the coverage line you were given, including how many emails remain unchecked. Never guess an invoice number.",
         }),
       });
       const data = await res.json().catch(() => ({}));

@@ -170,11 +170,13 @@ export async function runAgentConversation(
   // Finance chats carry the remittance email attachments (PDFs as readable
   // documents, sheets as text) so "read the attachment" just works.
   let mailDocs: ChatDocument[] = [];
+  let mailImages: ChatImage[] = [];
   let mailExtractBlock = "";
   if (employee.departmentId === "finance") {
-    const bundle = await getRemittanceAttachments({ maxDocs: 4, maxExtracts: 4 }).catch(() => null);
+    const bundle = await getRemittanceAttachments({ maxDocs: 4, maxExtracts: 4, maxImages: 3 }).catch(() => null);
     if (bundle) {
       mailDocs = bundle.documents.map((d) => ({ name: d.name, data: d.data }));
+      mailImages = bundle.images.map((i) => ({ mediaType: i.mediaType, data: i.data }));
       const extracts = bundle.extracts
         .map((e) => `### Attachment: ${e.name}\n\`\`\`\n${e.text}\n\`\`\``)
         .join("\n\n");
@@ -234,7 +236,7 @@ ${message}`;
     model,
     maxTokens: 6144,
     temperature: 0.4,
-    images,
+    images: [...mailImages, ...images],
     documents: [...mailDocs, ...documents],
   });
   // Rarely the API 200s with no text (observed in production as a ghost
@@ -250,7 +252,7 @@ ${message}`;
       model,
       maxTokens: 8192,
       temperature: 0.4,
-      images,
+      images: [...mailImages, ...images],
       documents: [...mailDocs, ...documents],
     });
     if (!res.text.trim()) {
