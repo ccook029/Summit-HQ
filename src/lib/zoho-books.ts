@@ -311,6 +311,34 @@ export async function fetchUncategorizedBankTxns(
 export const fetchOpenInvoices = () =>
   getAllPages<BooksInvoice>("/invoices", "invoices", { status: "unpaid" });
 
+/**
+ * Every unpaid invoice, walking Zoho's pages (200/page). The snapshot used
+ * to take page 1 only, which silently hid every invoice past the first 200 —
+ * the reason a customer's invoices could be "missing" from A/R.
+ */
+export async function fetchAllOpenInvoices(
+  params: Record<string, string> = {},
+  maxPages = 6
+): Promise<{ items: BooksInvoice[]; total: number; complete: boolean }> {
+  const items: BooksInvoice[] = [];
+  let total = 0;
+  let page = 1;
+  for (; page <= maxPages; page++) {
+    const res = await booksGet<Record<string, unknown>>("/invoices", {
+      ...params,
+      status: "unpaid",
+      page: String(page),
+      per_page: "200",
+    });
+    const rows = (res.invoices as BooksInvoice[]) ?? [];
+    items.push(...rows);
+    const ctx = res.page_context as { total?: number; has_more_page?: boolean } | undefined;
+    total = Math.max(total, ctx?.total ?? items.length);
+    if (!ctx?.has_more_page) return { items, total: Math.max(total, items.length), complete: true };
+  }
+  return { items, total: Math.max(total, items.length), complete: false };
+}
+
 /** All invoices dated on/after `sinceIso` (YYYY-MM-DD), any status — used to
  * check whether a consignment retailer's month was actually invoiced. */
 export const fetchRecentInvoices = (sinceIso: string) =>
@@ -484,7 +512,7 @@ export async function fetchBooksSnapshot(): Promise<string> {
   const [accounts, uncategorized, invoices, bills] = await Promise.all([
     safe("Chart of Accounts", () => fetchPageWithTotal<BooksAccount>("/chartofaccounts", "chartofaccounts"), empty as { items: BooksAccount[]; total: number }),
     safe("Uncategorized transactions", () => fetchUncategorizedBankTxns(40), empty as { items: BooksBankTxn[]; total: number }),
-    safe("Open invoices (A/R)", () => fetchPageWithTotal<BooksInvoice>("/invoices", "invoices", { status: "unpaid", ...locParams }), empty as { items: BooksInvoice[]; total: number }),
+    safe("Open invoices (A/R)", () => fetchAllOpenInvoices(locParams), { items: [], total: 0, complete: true } as { items: BooksInvoice[]; total: number; complete: boolean }),
     safe("Open bills (A/P)", () => fetchPageWithTotal<BooksBill>("/bills", "bills", { status: "unpaid", ...locParams }), empty as { items: BooksBill[]; total: number }),
   ]);
 
@@ -538,7 +566,7 @@ export async function fetchBooksSnapshot(): Promise<string> {
       : "Location filter: none — figures are ORG-WIDE (Summit/Head Office + True North Steelworks together, per the owner's current one-team-for-both setup). Attribute rows to their location when reporting per-division numbers.",
     `Chart of Accounts: ${accounts.total} accounts (${inactiveAccounts}+ inactive in sample) — shared org-wide`,
     `Uncategorized bank transactions: ${uncategorized.total}`,
-    `Open invoices (A/R): ${invoices.total} — $${arTotal.toFixed(2)}+ outstanding (sample), ${overdueAR}+ overdue`,
+    `Open invoices (A/R): ${invoices.total} — $${arTotal.toFixed(2)} outstanding across ${invoices.items.length} fetched, ${overdueAR} flagged overdue`,
     `Open bills (A/P): ${bills.total} — $${apTotal.toFixed(2)}+ outstanding (sample)`,
     "",
   ];
@@ -558,18 +586,18 @@ export async function fetchBooksSnapshot(): Promise<string> {
   // Open invoices, itemized — without this the team can only see aggregates
   // and has to ask a human to screenshot a customer's invoice list.
   if (invoices.items.length > 0) {
-    const rows = [...invoices.items].sort((a, b) => {
-      const c = (a.customer_name ?? "").localeCompare(b.customer_name ?? "");
-      return c !== 0 ? c : (a.date ?? "").localeCompare(b.date ?? "");
-    });
+    const rows = [...invoices.items].sort((a, b) =>
+      (b.date ?? "").localeCompare(a.date ?? "")
+    );
     const today = new Date().toISOString().slice(0, 10);
+    const shownRows = rows.slice(0, 400);
     lines.push(
-      `### Open Invoices — A/R detail (${rows.length} shown of ${invoices.total}${invoices.total > rows.length ? "; Zoho returns 200 per page, so older ones may be beyond this page" : ""})`
+      `### Open Invoices — A/R detail (${shownRows.length} shown of ${invoices.total} open, newest first${(invoices as { complete?: boolean }).complete === false ? "; PAGE CAP HIT — older invoices exist beyond this list" : ""})`
     );
     lines.push("Match remittances against THIS list — customer, invoice number, and balance are authoritative here.");
     lines.push("| Invoice | Customer | Date | Due | Balance | Status |");
     lines.push("|---|---|---|---|---|---|");
-    for (const i of rows.slice(0, 150)) {
+    for (const i of shownRows) {
       const overdue = i.due_date && i.due_date < today && (i.balance ?? 0) > 0;
       lines.push(
         `| ${i.invoice_number} | ${i.customer_name} | ${i.date ?? "—"} | ${i.due_date ?? "—"} | $${(i.balance ?? 0).toFixed(2)} | ${i.status}${overdue ? " (OVERDUE)" : ""} |`

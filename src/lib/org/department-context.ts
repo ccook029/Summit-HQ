@@ -47,7 +47,8 @@ async function renderFinanceContext(): Promise<string> {
   const [books, remit] = await Promise.all([
     safeBlock(
       "ZOHO BOOKS SNAPSHOT (cash, A/R, A/P — the live books)",
-      fetchBooksSnapshot()
+      fetchBooksSnapshot(),
+      70_000
     ),
     safeBlock(
       "LIKELY REMITTANCE EMAILS (Summit inbox — match against open invoices)",
