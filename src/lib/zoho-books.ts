@@ -555,6 +555,29 @@ export async function fetchBooksSnapshot(): Promise<string> {
     lines.push("");
   }
 
+  // Open invoices, itemized — without this the team can only see aggregates
+  // and has to ask a human to screenshot a customer's invoice list.
+  if (invoices.items.length > 0) {
+    const rows = [...invoices.items].sort((a, b) => {
+      const c = (a.customer_name ?? "").localeCompare(b.customer_name ?? "");
+      return c !== 0 ? c : (a.date ?? "").localeCompare(b.date ?? "");
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    lines.push(
+      `### Open Invoices — A/R detail (${rows.length} shown of ${invoices.total}${invoices.total > rows.length ? "; Zoho returns 200 per page, so older ones may be beyond this page" : ""})`
+    );
+    lines.push("Match remittances against THIS list — customer, invoice number, and balance are authoritative here.");
+    lines.push("| Invoice | Customer | Date | Due | Balance | Status |");
+    lines.push("|---|---|---|---|---|---|");
+    for (const i of rows.slice(0, 150)) {
+      const overdue = i.due_date && i.due_date < today && (i.balance ?? 0) > 0;
+      lines.push(
+        `| ${i.invoice_number} | ${i.customer_name} | ${i.date ?? "—"} | ${i.due_date ?? "—"} | $${(i.balance ?? 0).toFixed(2)} | ${i.status}${overdue ? " (OVERDUE)" : ""} |`
+      );
+    }
+    lines.push("");
+  }
+
   if (errors.length > 0) {
     lines.push("### ⚠️ Partial Data Notice");
     lines.push(...errors.map((e) => `- ${e}`));
