@@ -14,8 +14,10 @@ const MAX_WORK_ORDERS = 400;
 /** Transitions the store will accept — everything else is a bug upstream. */
 const ALLOWED: Record<WorkOrderStatus, WorkOrderStatus[]> = {
   queued: ["in_progress", "rejected"],
-  in_progress: ["in_review", "approved", "escalated", "error"],
-  in_review: ["revision", "approved", "escalated", "error"],
+  // "queued" on the two live states is the resume path: a run killed by the
+  // serverless ceiling leaves the order here with nobody driving it.
+  in_progress: ["in_review", "approved", "escalated", "error", "queued"],
+  in_review: ["revision", "approved", "escalated", "error", "queued"],
   revision: ["in_progress", "rejected"],
   approved: ["shipped", "revision", "rejected"],
   escalated: ["revision", "approved", "rejected"],

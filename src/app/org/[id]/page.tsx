@@ -46,13 +46,21 @@ interface WorkRound {
   round: number;
   draft: string;
 }
+interface ManagerReview {
+  round: number;
+  verdict: string;
+  notes: string;
+  at: string;
+}
 interface WorkOrder {
   id: string;
   title: string;
   status: string;
   deliverableType: string;
+  assigneeId: string;
   createdAt: string;
   rounds: WorkRound[];
+  reviews: ManagerReview[];
   error?: string;
 }
 interface RunLog {
@@ -232,6 +240,18 @@ export default function EmployeePage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* What this boss signed off on — their own review history. Without
+          this a boss's page looks idle even when they've reviewed all week,
+          because the work orders belong to the people they review. */}
+      {isBoss && dept && (
+        <ReviewsGiven
+          deptId={dept.id}
+          bossId={id}
+          bossName={firstNameOf(employee.name)}
+          employees={employees}
+        />
       )}
 
       {/* Work history */}
@@ -490,6 +510,97 @@ function DispatchTeam({ deptId, bossName, onDone }: { deptId: string; bossName: 
       </button>
       <span className="text-[11px] text-slate-500">{note ?? `Let ${bossName} plan the period and hand work to the team.`}</span>
     </div>
+  );
+}
+
+const VERDICT_TONE: Record<string, string> = {
+  approve: "text-emerald-700 border-emerald-300",
+  revise: "text-amber-700 border-amber-300",
+  escalate: "text-red-700 border-red-300",
+};
+const VERDICT_LABEL: Record<string, string> = {
+  approve: "approved",
+  revise: "sent back",
+  escalate: "escalated",
+};
+
+/** Every review this boss has given, newest first — one card per round they
+ *  ruled on, with their actual notes and a link into the order. */
+function ReviewsGiven({
+  deptId,
+  bossId,
+  bossName,
+  employees,
+}: {
+  deptId: string;
+  bossId: string;
+  bossName: string;
+  employees: Employee[];
+}) {
+  const [orders, setOrders] = useState<WorkOrder[] | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/org/work-orders?department=${encodeURIComponent(deptId)}&limit=60`)
+      .then((r) => r.json())
+      .then((d) => setOrders(d.orders ?? []))
+      .catch(() => setOrders([]));
+  }, [deptId]);
+
+  const rulings = useMemo(() => {
+    return (orders ?? [])
+      .filter((o) => o.assigneeId !== bossId && (o.reviews?.length ?? 0) > 0)
+      .flatMap((o) => o.reviews.map((r) => ({ order: o, review: r })))
+      .sort((a, b) => (a.review.at < b.review.at ? 1 : -1))
+      .slice(0, 12);
+  }, [orders, bossId]);
+
+  if (orders === null) return null;
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+        {bossName}&apos;s reviews — {rulings.length}
+      </h2>
+      {rulings.length === 0 ? (
+        <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-500">
+          Nothing reviewed yet. When someone on this team finishes a draft, {bossName}&apos;s
+          ruling on it lands here — and anything approved goes to your Review queue.
+        </p>
+      ) : (
+        rulings.map(({ order, review }) => {
+          const who = employees.find((e) => e.id === order.assigneeId)?.name ?? order.assigneeId;
+          return (
+            <div key={`${order.id}-${review.round}`} className="rounded-xl border border-line bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{order.title}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {who} · round {review.round} · {review.at.slice(0, 10)}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${
+                    VERDICT_TONE[review.verdict] ?? "text-slate-500 border-line"
+                  }`}
+                >
+                  {VERDICT_LABEL[review.verdict] ?? review.verdict}
+                </span>
+              </div>
+              {review.notes.trim() && (
+                <p className="mt-2 whitespace-pre-wrap border-l-2 border-line pl-3 text-xs leading-relaxed text-slate-700">
+                  {review.notes.trim()}
+                </p>
+              )}
+              {order.status === "approved" && (
+                <Link href="/review" className="mt-2 inline-block text-[11px] text-skydeep hover:underline">
+                  Waiting on your approval in Review →
+                </Link>
+              )}
+            </div>
+          );
+        })
+      )}
+    </section>
   );
 }
 
