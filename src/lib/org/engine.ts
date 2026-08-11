@@ -320,7 +320,7 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
     // BOTH the worker and the reviewing boss.
     let attachmentDocs: { name: string; data: string }[] = [];
     if (department.id === "finance") {
-      const bundle = await getRemittanceAttachments().catch(() => null);
+      const bundle = await getRemittanceAttachments({ maxDocs: 8, maxExtracts: 8, maxMessages: 24 }).catch(() => null);
       if (bundle) {
         attachmentDocs = bundle.documents;
         const extractBlock = bundle.extracts

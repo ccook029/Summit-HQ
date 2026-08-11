@@ -142,6 +142,7 @@ export default function ReviewPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <SweepRemittancesButton onDone={load} />
           <Link
             href="/dashboard"
             className="rounded-lg border border-line bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
@@ -524,6 +525,68 @@ function EscalationCard({
           {busy ? "Saving…" : "Decide"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One-click remittance sweep: creates a Bookkeeper work order that reads every
+ * remittance email + attachment, matches them against open invoices, and runs
+ * the full worker → Controller review cycle. The result lands in the queue
+ * above; approving it is what records the payments in Zoho Books.
+ */
+function SweepRemittancesButton({ onDone }: { onDone: () => Promise<void> }) {
+  const [running, setRunning] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  const run = async () => {
+    setRunning(true);
+    setNote("Reading remittances and matching invoices…");
+    try {
+      const res = await fetch("/api/org/work-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assigneeId: "bookkeeper",
+          title: "Remittance sweep — clear paid invoices",
+          deliverableType: "remittance-match",
+          createdBy: "Chris Cook (Review)",
+          run: true,
+          brief:
+            "Work every remittance email available to you, not just the newest. For EACH one: read its attachments (the PDF/spreadsheet carries the payer's invoice references and amounts), find the matching open invoice in the A/R detail table, and confirm payer, amount, and reference agree. " +
+            "Put every confident match in ONE `payment` block with its evidence — those are applied to Zoho Books when the owner approves this order. " +
+            "List separately, in prose: (a) remittances you could not match and why, (b) any whose amount disagrees with the invoice balance, and (c) how much of the mailbox you actually covered, so a second sweep can pick up the rest. Never guess an invoice number.",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNote(data.error ?? "Sweep failed.");
+      } else {
+        setNote(
+          data.order?.status === "approved"
+            ? "Done — the Controller approved it; it's in your queue below."
+            : `Done — status: ${data.order?.status ?? "see queue"}.`
+        );
+      }
+      await onDone();
+    } catch {
+      setNote("Sweep failed — try again.");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {note && <span className="text-[11px] text-slate-500">{note}</span>}
+      <button
+        onClick={run}
+        disabled={running}
+        title="Read every remittance email, match against open invoices, and route the matches here for approval"
+        className="rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-50"
+      >
+        {running ? "Sweeping…" : "Sweep remittances"}
+      </button>
     </div>
   );
 }
