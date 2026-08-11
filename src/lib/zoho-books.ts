@@ -430,6 +430,28 @@ export async function uncategorizeTxn(transactionId: string): Promise<void> {
   await booksPost(`/banktransactions/${transactionId}/uncategorize`, {});
 }
 
+/**
+ * Customer names that appear in the given text AND have an OPEN invoice.
+ * Lets a plain-English instruction ("just do Future Transfer this time")
+ * actually narrow which mail gets fetched, instead of only being advice the
+ * employee can't act on. Matches on the first two words of a customer name
+ * too, so "Future Transfer" finds "Future Transfer Co., Inc.".
+ */
+export async function matchOpenCustomersInText(text: string): Promise<string[]> {
+  if (!text.trim()) return [];
+  const haystack = text.toLowerCase();
+  const { items } = await fetchAllOpenInvoices().catch(() => ({ items: [] as BooksInvoice[] }));
+  const hits = new Set<string>();
+  for (const inv of items) {
+    const name = (inv.customer_name ?? "").trim();
+    if (name.length < 3) continue;
+    const short = name.split(/[\s,]+/).slice(0, 2).join(" ");
+    if (haystack.includes(name.toLowerCase())) hits.add(name);
+    else if (short.length >= 6 && haystack.includes(short.toLowerCase())) hits.add(short);
+  }
+  return [...hits];
+}
+
 // ---- Payment recording (owner-gated: only the ship executor calls this) ----
 
 export interface InvoiceLookup {

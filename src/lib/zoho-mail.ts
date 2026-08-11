@@ -276,6 +276,10 @@ export async function getRemittanceAttachments(
      * Mail naming one of these is worked first — that's the mail that can
      * actually clear something. */
     focusTerms?: string[];
+    /** HARD filter: when set, only mail matching one of these terms is
+     * considered at all. Set when the owner names a specific customer
+     * ("just do Future Transfer") so the request actually reaches the fetch. */
+    filterTerms?: string[];
     /** Skip attachments already handed to an employee in a previous sweep,
      * so repeated sweeps advance through the backlog instead of re-reading
      * the newest mail. */
@@ -300,8 +304,15 @@ export async function getRemittanceAttachments(
   // genuinely have none simply return an empty list.
   const processedPeek = opts.skipProcessed ? await loadProcessed() : {};
   const focusTerms = (opts.focusTerms ?? []).map((t) => t.toLowerCase());
+  const filterTerms = (opts.filterTerms ?? []).map((t) => t.toLowerCase());
+  const matchesFilter = (m: MailMessage) => {
+    if (filterTerms.length === 0) return true;
+    const hay = `${m.subject} ${m.summary} ${m.from}`.toLowerCase();
+    return filterTerms.some((t) => hay.includes(t));
+  };
   const candidates = messages
     .filter(isRemittanceLike)
+    .filter(matchesFilter)
     // Messages fully handled in an earlier sweep are skipped outright — no
     // per-message API call — so weekly runs stay fast as the ledger grows.
     .filter((m) => !(opts.skipProcessed && processedPeek[`msg:${m.messageId}`]))
@@ -433,6 +444,9 @@ export async function getRemittanceAttachments(
 
   const remaining = Math.max(0, candidates.length - messagesChecked);
   const note = [
+    filterTerms.length
+      ? `SCOPE: this pull was RESTRICTED to mail matching ${filterTerms.map((t) => `"${t}"`).join(" / ")} because that is what was asked for — ${candidates.length} such email(s) were found. Work only these; do not report on other customers.`
+      : "",
     `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"} (given to you as readable documents) plus ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"}, from ${messagesChecked} of ${candidates.length} unread remittance-like emails. Scan window: ${days > 0 ? `~${days} days` : "ALL TIME (entire mailbox)"}${exhausted ? "" : " — mail page cap hit, even older mail exists beyond the scan"}.`,
     focusTerms.length
       ? `${focusedCount} of the unread remittance-like emails name a customer or invoice number CURRENTLY OPEN in A/R — those were prioritised. Mail matching none of them usually concerns invoices already settled (nothing to clear) or vendor bills; note it in one line and move on rather than analysing it at length.`

@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 import { callClaude } from "../anthropic";
 import { getRemittanceAttachments } from "../zoho-mail";
-import { fetchAllOpenInvoices } from "../zoho-books";
+import { fetchAllOpenInvoices, matchOpenCustomersInText } from "../zoho-books";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "../models";
 import { renderOrgKnowledge } from "../org-knowledge";
 import { renderCrossAgentSignals } from "../cross-agent";
@@ -338,13 +338,22 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
             )
           )
         : [];
+      // If the brief names a customer that has open invoices, restrict the
+      // pull to that customer — "just do Future Transfer" has to reach the
+      // fetch, not just the prose.
+      const named = await matchOpenCustomersInText(
+        `${order.title}\n${order.brief}`
+      ).catch(() => [] as string[]);
       const bundle = await getRemittanceAttachments({
         maxDocs: 10,
         maxExtracts: 10,
         maxImages: 6,
         maxMessages: 60,
-        skipProcessed: true,
+        // A targeted request should re-read that customer's mail even if an
+        // earlier sweep already saw it.
+        skipProcessed: named.length === 0,
         focusTerms,
+        filterTerms: named,
       }).catch(() => null);
       if (bundle) {
         attachmentDocs = bundle.documents;

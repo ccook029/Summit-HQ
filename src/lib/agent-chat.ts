@@ -16,6 +16,7 @@ import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "./models";
 import { getRunLogsByAgent } from "./store";
 import { renderOrgKnowledge } from "./org-knowledge";
 import { getRemittanceAttachments } from "./zoho-mail";
+import { matchOpenCustomersInText } from "./zoho-books";
 import { renderCrossAgentSignals } from "./cross-agent";
 import { loadAgentChat, appendAgentChat } from "./agent-chat-store";
 import {
@@ -173,7 +174,16 @@ export async function runAgentConversation(
   let mailImages: ChatImage[] = [];
   let mailExtractBlock = "";
   if (employee.departmentId === "finance") {
-    const bundle = await getRemittanceAttachments({ maxDocs: 4, maxExtracts: 4, maxImages: 3 }).catch(() => null);
+    // "Just look at Future Transfer" should change WHICH mail is fetched,
+    // not merely be advice the employee can't act on.
+    const named = await matchOpenCustomersInText(message).catch(() => [] as string[]);
+    const bundle = await getRemittanceAttachments({
+      maxDocs: named.length ? 8 : 4,
+      maxExtracts: named.length ? 8 : 4,
+      maxImages: named.length ? 6 : 3,
+      maxMessages: named.length ? 40 : 14,
+      filterTerms: named,
+    }).catch(() => null);
     if (bundle) {
       mailDocs = bundle.documents.map((d) => ({ name: d.name, data: d.data }));
       mailImages = bundle.images.map((i) => ({ mediaType: i.mediaType, data: i.data }));
