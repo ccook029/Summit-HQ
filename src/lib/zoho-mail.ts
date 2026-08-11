@@ -261,6 +261,24 @@ interface AttachmentInfo {
   attachmentSize?: string | number;
 }
 
+/**
+ * Pull the text out of a PDF server-side. This is what makes a real backlog
+ * clean-up possible: a text remittance costs a fraction of what a whole PDF
+ * costs in a prompt, so dozens fit per round instead of a handful. Scanned
+ * PDFs yield nothing here and fall back to being sent as documents for the
+ * employee to read visually.
+ */
+async function pdfToText(buf: ArrayBuffer): Promise<string> {
+  try {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const doc = await getDocumentProxy(new Uint8Array(buf));
+    const { text } = await extractText(doc, { mergePages: true });
+    return (Array.isArray(text) ? text.join("\n") : text ?? "").trim();
+  } catch {
+    return "";
+  }
+}
+
 const MAX_PDF_BYTES = 4_500_000;
 const MAX_EXTRACT_CHARS = 40_000;
 const MAX_IMAGE_BYTES = 3_000_000;
@@ -379,14 +397,23 @@ export async function getRemittanceAttachments(
         const path = `/accounts/${accountId}/folders/${msg.folderId}/messages/${msg.messageId}/attachments/${a.attachmentId}`;
 
         if (ext === "pdf") {
-          if (documents.length >= maxDocs) continue;
           if (size > MAX_PDF_BYTES) {
             notes.push(`skipped ${label} (PDF over 4.5MB)`);
             continue;
           }
           const buf = await mailGetBinary(path);
-          documents.push({ name: label, data: Buffer.from(buf).toString("base64") });
-          newlyProcessed[key] = stamp;
+          const text = await pdfToText(buf);
+          if (text.length >= 40) {
+            // Text-bearing PDF: cheap to carry, so these are the workhorse.
+            if (extracts.length >= maxExtracts) continue;
+            extracts.push({ name: label, text: text.slice(0, MAX_EXTRACT_CHARS) });
+            newlyProcessed[key] = stamp;
+          } else {
+            // Scanned/image-only PDF — must be looked at, not read.
+            if (documents.length >= maxDocs) continue;
+            documents.push({ name: label, data: Buffer.from(buf).toString("base64") });
+            newlyProcessed[key] = stamp;
+          }
         } else if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
           // Scans and screenshots of remittances — Claude reads these.
           if (images.length >= maxImages) continue;
@@ -447,7 +474,7 @@ export async function getRemittanceAttachments(
     filterTerms.length
       ? `SCOPE: this pull was RESTRICTED to mail matching ${filterTerms.map((t) => `"${t}"`).join(" / ")} because that is what was asked for — ${candidates.length} such email(s) were found. Work only these; do not report on other customers.`
       : "",
-    `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"} (given to you as readable documents) plus ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"}, from ${messagesChecked} of ${candidates.length} unread remittance-like emails. Scan window: ${days > 0 ? `~${days} days` : "ALL TIME (entire mailbox)"}${exhausted ? "" : " — mail page cap hit, even older mail exists beyond the scan"}.`,
+    `ATTACHMENTS PULLED: ${extracts.length} attachment${extracts.length === 1 ? "" : "s"} read as TEXT (PDF text extracted server-side, plus any spreadsheets/CSVs) and ${documents.length} scanned PDF${documents.length === 1 ? "" : "s"} + ${images.length} image${images.length === 1 ? "" : "s"} attached for you to look at, from ${messagesChecked} of ${candidates.length} unread remittance-like emails. Scan window: ${days > 0 ? `~${days} days` : "ALL TIME (entire mailbox)"}${exhausted ? "" : " — mail page cap hit, even older mail exists beyond the scan"}.`,
     focusTerms.length
       ? `${focusedCount} of the unread remittance-like emails name a customer or invoice number CURRENTLY OPEN in A/R — those were prioritised. Mail matching none of them usually concerns invoices already settled (nothing to clear) or vendor bills; note it in one line and move on rather than analysing it at length.`
       : "",

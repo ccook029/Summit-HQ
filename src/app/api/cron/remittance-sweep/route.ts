@@ -39,7 +39,7 @@ async function runSweep(trigger: string) {
     maxDocs: 1,
     maxExtracts: 1,
     maxImages: 1,
-    maxMessages: 60,
+    maxMessages: 150,
     skipProcessed: true,
     dryRun: true,
   }).catch(() => null);

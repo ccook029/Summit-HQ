@@ -345,10 +345,12 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
         `${order.title}\n${order.brief}`
       ).catch(() => [] as string[]);
       const bundle = await getRemittanceAttachments({
-        maxDocs: 10,
-        maxExtracts: 10,
-        maxImages: 6,
-        maxMessages: 60,
+        // Text extracts are cheap, so the batch is sized around them; whole
+        // PDFs/images are only for scans and stay tightly capped.
+        maxDocs: 4,
+        maxExtracts: 60,
+        maxImages: 4,
+        maxMessages: 150,
         // A targeted request should re-read that customer's mail even if an
         // earlier sweep already saw it.
         skipProcessed: named.length === 0,

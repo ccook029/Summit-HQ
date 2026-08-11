@@ -178,10 +178,10 @@ export async function runAgentConversation(
     // not merely be advice the employee can't act on.
     const named = await matchOpenCustomersInText(message).catch(() => [] as string[]);
     const bundle = await getRemittanceAttachments({
-      maxDocs: named.length ? 8 : 4,
-      maxExtracts: named.length ? 8 : 4,
-      maxImages: named.length ? 6 : 3,
-      maxMessages: named.length ? 40 : 14,
+      maxDocs: 3,
+      maxExtracts: named.length ? 40 : 12,
+      maxImages: 3,
+      maxMessages: named.length ? 120 : 30,
       filterTerms: named,
     }).catch(() => null);
     if (bundle) {
