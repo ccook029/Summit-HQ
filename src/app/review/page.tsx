@@ -34,6 +34,7 @@ interface WorkOrder {
   status: string;
   createdBy: string;
   createdAt: string;
+  updatedAt?: string;
   rounds: WorkRound[];
   reviews: ManagerReview[];
   error?: string;
@@ -69,7 +70,7 @@ export default function ReviewPage() {
   const load = useCallback(async () => {
     const [q, err, esc, dir] = await Promise.all([
       fetch("/api/org/work-orders?queue=owner").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/org/work-orders?status=error&limit=20").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/org/work-orders?status=error,in_progress,in_review&limit=20").then((r) => r.json()).catch(() => ({})),
       fetch("/api/org/escalations").then((r) => r.json()).catch(() => ({})),
       fetch("/api/org/directory").then((r) => r.json()).catch(() => ({})),
     ]);
@@ -181,17 +182,36 @@ export default function ReviewPage() {
             )}
           </section>
 
-          {erroredOrders.length > 0 && (
+          {erroredOrders.filter((o) => o.status !== "error").length > 0 && (
+            <section>
+              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-sky-700">
+                Still working — {erroredOrders.filter((o) => o.status !== "error").length}
+              </h2>
+              <p className="mb-3 text-xs text-slate-500">
+                These are mid-run. Refresh in a minute; if one is still here and
+                hasn&apos;t moved, it stalled — resume picks it up from the top.
+              </p>
+              <div className="space-y-3">
+                {erroredOrders
+                  .filter((o) => o.status !== "error")
+                  .map((o) => (
+                    <InFlightCard key={o.id} order={o} onDone={load} />
+                  ))}
+              </div>
+            </section>
+          )}
+
+          {erroredOrders.filter((o) => o.status === "error").length > 0 && (
             <section className="space-y-3">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                Ran into a problem — {erroredOrders.length}
+                Ran into a problem — {erroredOrders.filter((o) => o.status === "error").length}
               </h2>
               <p className="text-xs text-slate-400">
                 These pieces hit an error mid-run (usually the AI service was
                 briefly busy). Retry runs the piece again from the top; it does
                 not re-plan.
               </p>
-              {erroredOrders.map((o) => (
+              {erroredOrders.filter((o) => o.status === "error").map((o) => (
                 <ErroredOrderCard
                   key={o.id}
                   order={o}
@@ -594,6 +614,65 @@ function SweepRemittancesButton({ onDone }: { onDone: () => Promise<void> }) {
       >
         {running ? "Sweeping…" : "Sweep remittances"}
       </button>
+    </div>
+  );
+}
+
+/** A work order still mid-run (or stalled) — with a resume for the stalled case. */
+function InFlightCard({
+  order,
+  onDone,
+}: {
+  order: WorkOrder;
+  onDone: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const started = order.updatedAt ? new Date(order.updatedAt) : null;
+  const minutes = started
+    ? Math.round((Date.now() - started.getTime()) / 60000)
+    : null;
+
+  const resume = async () => {
+    setBusy(true);
+    setNote("Resuming…");
+    try {
+      const res = await fetch(`/api/org/work-orders/${order.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resume" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setNote(res.ok ? `Done — status: ${data.order?.status ?? "see queue"}.` : (data.error ?? "Resume failed."));
+      await onDone();
+    } catch {
+      setNote("Resume failed — try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-sky/40 bg-sky/10 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-medium text-slate-900">{order.title}</p>
+          <p className="text-xs text-slate-500">
+            {order.status === "in_review" ? "With the boss for review" : "Drafting"}
+            {minutes !== null ? ` · last activity ${minutes} min ago` : ""}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {note && <span className="text-[11px] text-slate-500">{note}</span>}
+          <button
+            onClick={resume}
+            disabled={busy}
+            className="rounded-md border border-sky/60 bg-white px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:bg-sky/20 disabled:opacity-50"
+          >
+            {busy ? "Resuming…" : "Resume"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

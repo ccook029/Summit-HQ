@@ -112,6 +112,22 @@ export async function updateWorkOrder(
 }
 
 /** Work waiting on the owner: boss-approved deliverables + escalated orders. */
+/**
+ * Return a stalled order to the queue so it can be re-run. A run that dies
+ * mid-flight (serverless timeout, dropped connection) leaves the order stuck
+ * in in_progress/in_review with no way forward — this is that way forward.
+ */
+export async function resumeWorkOrder(id: string): Promise<WorkOrder | null> {
+  const order = await getWorkOrder(id);
+  if (!order) return null;
+  if (order.status !== "in_progress" && order.status !== "in_review") {
+    throw new Error(
+      `Work order ${id} is "${order.status}" — only a stalled in-progress order needs resuming.`
+    );
+  }
+  return updateWorkOrder(id, { status: "queued", error: undefined });
+}
+
 export async function getOwnerQueue(): Promise<WorkOrder[]> {
   return listWorkOrders({ status: ["approved", "escalated"] });
 }

@@ -9,7 +9,7 @@
 //   - reject:    kill it
 // ---------------------------------------------------------------------------
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkOrder } from "@/lib/org/work-orders";
+import { getWorkOrder, resumeWorkOrder } from "@/lib/org/work-orders";
 import {
   rejectWorkOrder,
   runWorkOrder,
@@ -44,6 +44,14 @@ export async function POST(
     };
 
     switch (body.action) {
+      case "resume": {
+        const order = await resumeWorkOrder(id);
+        if (!order) {
+          return NextResponse.json({ error: "Work order not found." }, { status: 404 });
+        }
+        const { order: done, tokens } = await runWorkOrder(id);
+        return NextResponse.json({ ok: true, order: done, tokens });
+      }
       case "run": {
         const { order, tokens } = await runWorkOrder(id);
         return NextResponse.json({ ok: true, order, tokens });
@@ -68,7 +76,7 @@ export async function POST(
       }
       default:
         return NextResponse.json(
-          { error: 'action must be one of "run", "ship", "send_back", "reject".' },
+          { error: 'action must be one of "run", "resume", "ship", "send_back", "reject".' },
           { status: 400 }
         );
     }
