@@ -188,20 +188,25 @@ interface AttachmentInfo {
   attachmentSize?: string | number;
 }
 
-const MAX_PDF_BYTES = 2_500_000;
-const MAX_EXTRACT_CHARS = 20_000;
+const MAX_PDF_BYTES = 4_500_000;
+const MAX_EXTRACT_CHARS = 40_000;
 
 export async function getRemittanceAttachments(
   opts: { days?: number; maxDocs?: number; maxExtracts?: number; maxMessages?: number } = {}
 ): Promise<RemittanceAttachmentBundle> {
   const days = opts.days ?? 90;
-  const maxDocs = opts.maxDocs ?? 3;
-  const maxExtracts = opts.maxExtracts ?? 4;
-  const maxMessages = opts.maxMessages ?? 8;
+  const maxDocs = opts.maxDocs ?? 6;
+  const maxExtracts = opts.maxExtracts ?? 6;
+  const maxMessages = opts.maxMessages ?? 14;
 
   const { messages } = await fetchMessagesSince(days);
+  // NOTE: do NOT filter on hasAttachment — Zoho omits/zeroes that flag on
+  // some listings, which silently hid real attachments. Ask every
+  // remittance-like message for its attachment info instead; messages that
+  // genuinely have none simply return an empty list.
   const candidates = messages
-    .filter((m) => m.hasAttachment && REMIT_PATTERN.test(`${m.subject} ${m.summary}`))
+    .filter((m) => REMIT_PATTERN.test(`${m.subject} ${m.summary}`))
+    .sort((a, b) => Number(b.hasAttachment) - Number(a.hasAttachment))
     .slice(0, maxMessages);
 
   const accountId = await getAccountId();
@@ -214,13 +219,20 @@ export async function getRemittanceAttachments(
     return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : ms;
   };
 
+  const perMessage: string[] = [];
   for (const msg of candidates) {
     if (documents.length >= maxDocs && extracts.length >= maxExtracts) break;
     try {
       const info = await mailGet<{ data?: { attachments?: AttachmentInfo[] } }>(
         `/accounts/${accountId}/folders/${msg.folderId}/messages/${msg.messageId}/attachmentinfo`
       );
-      for (const a of info.data?.attachments ?? []) {
+      const found = info.data?.attachments ?? [];
+      if (found.length > 0) {
+        perMessage.push(
+          `"${msg.subject}" (${fmt(msg.receivedTime)}): ${found.map((f) => f.attachmentName ?? "?").join(", ")}`
+        );
+      }
+      for (const a of found) {
         const name = a.attachmentName ?? "attachment";
         const label = `${fmt(msg.receivedTime)} · ${msg.from} · ${name}`;
         const ext = name.toLowerCase().split(".").pop() ?? "";
@@ -263,7 +275,18 @@ export async function getRemittanceAttachments(
     }
   }
 
-  const note = `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} (provided to you as readable documents) and ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"} from ${candidates.length} remittance-like emails with attachments.${notes.length ? ` Notes: ${notes.join("; ")}.` : ""}`;
+  const note = [
+    `ATTACHMENTS PULLED: ${documents.length} PDF${documents.length === 1 ? "" : "s"} (given to you as readable documents) and ${extracts.length} spreadsheet/text extract${extracts.length === 1 ? "" : "s"}, from ${candidates.length} remittance-like emails checked.`,
+    perMessage.length
+      ? `Attachments found per email — ${perMessage.join(" | ")}.`
+      : "No attachments were found on any checked email.",
+    documents.length > 0
+      ? `The PDFs above are attached to this message IN ORDER: ${documents.map((d, i) => `[${i + 1}] ${d.name}`).join("; ")}. Read EVERY one before answering, and state per document what you could and could not extract.`
+      : "",
+    notes.length ? `Problems: ${notes.join("; ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return { documents, extracts, note };
 }
 

@@ -172,7 +172,7 @@ export async function runAgentConversation(
   let mailDocs: ChatDocument[] = [];
   let mailExtractBlock = "";
   if (employee.departmentId === "finance") {
-    const bundle = await getRemittanceAttachments({ maxDocs: 2, maxExtracts: 3 }).catch(() => null);
+    const bundle = await getRemittanceAttachments({ maxDocs: 4, maxExtracts: 4 }).catch(() => null);
     if (bundle) {
       mailDocs = bundle.documents.map((d) => ({ name: d.name, data: d.data }));
       const extracts = bundle.extracts
