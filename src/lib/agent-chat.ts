@@ -16,7 +16,10 @@ import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "./models";
 import { getRunLogsByAgent } from "./store";
 import { renderOrgKnowledge } from "./org-knowledge";
 import { getRemittanceAttachments } from "./zoho-mail";
-import { matchOpenCustomersInText } from "./zoho-books";
+import {
+  matchOpenCustomersInText,
+  renderCustomerArLedger,
+} from "./zoho-books";
 import { renderCrossAgentSignals } from "./cross-agent";
 import { loadAgentChat, appendAgentChat } from "./agent-chat-store";
 import {
@@ -191,6 +194,10 @@ export async function runAgentConversation(
         .map((e) => `### Attachment: ${e.name}\n\`\`\`\n${e.text}\n\`\`\``)
         .join("\n\n");
       mailExtractBlock = `\n\n## Remittance email attachments\n${bundle.note}${extracts ? `\n\n${extracts}` : ""}`;
+    }
+    if (named.length > 0) {
+      const ledger = await renderCustomerArLedger(named).catch(() => "");
+      if (ledger) mailExtractBlock += `\n\n${ledger}`;
     }
   }
 

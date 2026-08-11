@@ -19,7 +19,11 @@
 // ---------------------------------------------------------------------------
 import { callClaude } from "../anthropic";
 import { getRemittanceAttachments } from "../zoho-mail";
-import { fetchAllOpenInvoices, matchOpenCustomersInText } from "../zoho-books";
+import {
+  fetchAllOpenInvoices,
+  matchOpenCustomersInText,
+  renderCustomerArLedger,
+} from "../zoho-books";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "../models";
 import { renderOrgKnowledge } from "../org-knowledge";
 import { renderCrossAgentSignals } from "../cross-agent";
@@ -357,6 +361,10 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
         focusTerms,
         filterTerms: named,
       }).catch(() => null);
+      if (named.length > 0) {
+        const ledger = await renderCustomerArLedger(named).catch(() => "");
+        if (ledger) policyBlock += `\n\n${ledger}`;
+      }
       if (bundle) {
         attachmentDocs = bundle.documents;
         attachmentImages = bundle.images.map((i) => ({ mediaType: i.mediaType, data: i.data }));

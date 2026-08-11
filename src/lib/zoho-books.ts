@@ -452,6 +452,50 @@ export async function matchOpenCustomersInText(text: string): Promise<string[]> 
   return [...hits];
 }
 
+/**
+ * The COMPLETE open-invoice ledger for named customers — every invoice, no
+ * row cap. The org-wide snapshot is necessarily trimmed, which leaves an
+ * employee unable to confirm a specific customer's balance; this closes that
+ * gap whenever a customer is named in a brief or a chat message.
+ */
+export async function renderCustomerArLedger(
+  customerNames: string[]
+): Promise<string> {
+  if (customerNames.length === 0) return "";
+  const wanted = customerNames.map((n) => n.toLowerCase());
+  const { items } = await fetchAllOpenInvoices().catch(() => ({
+    items: [] as BooksInvoice[],
+  }));
+  const rows = items
+    .filter((i) => {
+      const name = (i.customer_name ?? "").toLowerCase();
+      return wanted.some((w) => name.includes(w) || w.includes(name));
+    })
+    .sort((a, b) => (a.invoice_number ?? "").localeCompare(b.invoice_number ?? ""));
+
+  const today = new Date().toISOString().slice(0, 10);
+  const header = `=== LIVE OPEN-INVOICE LEDGER — ${customerNames.join(", ")} (COMPLETE, no row cap) ===`;
+  if (rows.length === 0) {
+    return [
+      header,
+      `No OPEN invoices for ${customerNames.join(", ")}. Any invoice number you hold a remittance for is therefore already paid/closed — do NOT propose a payment for it.`,
+      "=== END LEDGER ===",
+    ].join("\n");
+  }
+  const total = rows.reduce((s, i) => s + (i.balance ?? 0), 0);
+  return [
+    header,
+    `${rows.length} open invoice(s), $${total.toFixed(2)} outstanding. This is the authoritative balance list for this customer — an invoice number NOT in this table is already settled.`,
+    "| Invoice | Date | Due | Balance | Status |",
+    "|---|---|---|---|---|",
+    ...rows.map((i) => {
+      const overdue = i.due_date && i.due_date < today && (i.balance ?? 0) > 0;
+      return `| ${i.invoice_number} | ${i.date ?? "—"} | ${i.due_date ?? "—"} | $${(i.balance ?? 0).toFixed(2)} | ${i.status}${overdue ? " (OVERDUE)" : ""} |`;
+    }),
+    "=== END LEDGER ===",
+  ].join("\n");
+}
+
 // ---- Payment recording (owner-gated: only the ship executor calls this) ----
 
 export interface InvoiceLookup {
