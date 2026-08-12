@@ -29,6 +29,10 @@ import { kv } from "@vercel/kv";
 interface CachedToken {
   accessToken: string;
   expiresAt: number;
+  /** The scopes Zoho actually granted this token — it reports them on every
+   * refresh. Cached alongside so "can we write to banking?" is answerable
+   * without guessing at what was ticked in the API console months ago. */
+  scope?: string;
 }
 
 const TOKEN_CACHE_KEY = "zoho-access-token-cache";
@@ -54,6 +58,19 @@ export async function invalidateTokenCache(): Promise<void> {
   } catch {
     /* KV optional — ignore */
   }
+}
+
+/**
+ * The scopes on the current token, as reported by Zoho — forces a refresh if
+ * nothing is cached yet. Returns null when Zoho didn't report any (older
+ * self-client tokens sometimes omit the field), which means "unknown", NOT
+ * "none": in that case probe the API instead of trusting this.
+ */
+export async function getTokenScopes(): Promise<string[] | null> {
+  await getAccessToken();
+  const raw = cachedToken?.scope?.trim();
+  if (!raw) return null;
+  return raw.split(/[\s,]+/).filter(Boolean);
 }
 
 export async function getAccessToken(): Promise<string> {
@@ -107,6 +124,7 @@ async function acquireToken(): Promise<string> {
   const data = (await res.json()) as {
     access_token: string;
     expires_in: number;
+    scope?: string;
     error?: string;
   };
 
@@ -121,6 +139,7 @@ async function acquireToken(): Promise<string> {
   cachedToken = {
     accessToken: data.access_token,
     expiresAt: Date.now() + data.expires_in * 1000,
+    scope: data.scope,
   };
   try {
     await kv.set(TOKEN_CACHE_KEY, cachedToken);

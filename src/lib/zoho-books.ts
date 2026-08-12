@@ -500,6 +500,48 @@ export async function createBankTxn(opts: {
   return txn?.transaction_id ?? null;
 }
 
+/**
+ * Can this token write to banking? Answered by probing, not by trusting the
+ * scope string — some tokens don't report their scopes at all.
+ *
+ * The probe posts a DELIBERATELY invalid bank transaction (account id "0",
+ * amount 0). Zoho checks the scope before it validates the body, so:
+ *   - missing scope → 401 / INVALID_OAUTHSCOPE
+ *   - scope present → a validation complaint about the account or amount
+ * Either way nothing is created. Never call this on a payload that could
+ * succeed.
+ */
+export async function probeBankingWriteScope(): Promise<{
+  ok: boolean;
+  detail: string;
+}> {
+  try {
+    await booksPost("/banktransactions", {
+      transaction_type: "deposit",
+      account_id: "0",
+      from_account_id: "0",
+      date: "1970-01-01",
+      amount: 0,
+    });
+    // Should be unreachable — a zero-amount post to account "0" is invalid.
+    return { ok: true, detail: "write scope present (probe unexpectedly accepted)" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/INVALID_OAUTHSCOPE|OAUTHSCOPE_MISMATCH|invalid oauth scope/i.test(msg)) {
+      return {
+        ok: false,
+        detail:
+          "the token does NOT carry Books banking write scope — reconciliations will propose but approving them will fail",
+      };
+    }
+    if (/\(401\)|\(403\)/.test(msg)) {
+      return { ok: false, detail: `authorization refused: ${msg.slice(0, 200)}` };
+    }
+    // Any other rejection means the call got past authorization.
+    return { ok: true, detail: "write scope present (probe rejected on validation, as expected)" };
+  }
+}
+
 /** Reverse a categorization — returns the feed line to Uncategorized. */
 export async function uncategorizeTxn(transactionId: string): Promise<void> {
   await booksPost(`/banktransactions/${transactionId}/uncategorize`, {});

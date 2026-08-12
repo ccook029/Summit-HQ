@@ -4,8 +4,8 @@
 // Behind the login wall like everything else.
 // ---------------------------------------------------------------------------
 import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/zoho";
-import { fetchLocations } from "@/lib/zoho-books";
+import { getAccessToken, getTokenScopes } from "@/lib/zoho";
+import { fetchLocations, probeBankingWriteScope } from "@/lib/zoho-books";
 import { fetchRecentMessages } from "@/lib/zoho-mail";
 
 export const dynamic = "force-dynamic";
@@ -60,13 +60,28 @@ export async function GET() {
       })
     : { ok: false, detail: "skipped — OAuth failed" };
 
+  // What the token may actually DO. Scopes are read from Zoho's own token
+  // response where it reports them; banking write is probed directly, because
+  // that is the one permission an approval depends on and a guess is worthless.
+  const scopes = oauth.ok ? await getTokenScopes().catch(() => null) : null;
+  const banking = oauth.ok
+    ? await probeBankingWriteScope().catch((err) => ({
+        ok: false,
+        detail: err instanceof Error ? err.message.slice(0, 200) : "probe failed",
+      }))
+    : { ok: false, detail: "skipped — OAuth failed" };
+
   return NextResponse.json({
     configured: true,
     oauth,
     books,
     mail,
+    scopes,
+    banking,
     hint: !mail.ok && /INVALID_OAUTHSCOPE/i.test(mail.detail)
       ? "The refresh token in Vercel does NOT carry the Mail scopes. Generate a token at /setup/zoho whose Mail check is green, then replace ZOHO_REFRESH_TOKEN and redeploy."
-      : null,
+      : !banking.ok && oauth.ok
+        ? "Bank reconciliations will run and propose entries, but approving one will fail. Regenerate the refresh token with ZohoBooks.banking.CREATE and ZohoBooks.banking.UPDATE (or ZohoBooks.fullaccess.all) added."
+        : null,
   });
 }
