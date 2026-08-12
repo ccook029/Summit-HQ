@@ -74,6 +74,31 @@ Optional: `ZOHO_MAIL_DOMAIN` when the mail host isn't derivable from
 `ZOHO_ACCOUNTS_URL`. Outbound sending (Ops/BD email executors) remains a
 future, separately-scoped decision.
 
+## 3d. Bank reconciliation (statement → Books)
+
+Any finance employee's page has a **Reconcile bank transactions** panel. Drop
+in a statement export (.xlsx/.csv); the browser normalizes Excel serial dates,
+splits the rows into **one work order per month**, and runs them one at a time
+(a 5,000-row / 4-year export is 56 orders — far past what one prompt or one
+300s run can hold). Each order carries only its own month's rows.
+
+For a `bank-reconcile` order the engine skips the remittance mailbox and
+instead grounds the employee in live Books data for that month's window: the
+bank accounts with their ids, every feed line Books already holds (so
+already-recorded rows aren't proposed again), and the chart of accounts. The
+employee returns a ```` ```bank ```` block with `create` (on the statement,
+missing from Books) and `categorize` (in Books, uncategorized) lists.
+
+Approving the order in `/review` is what writes: `createBankTxn` for the
+missing rows, `categorizeTxnAsExpense`/`AsDeposit` for the rest. Every account
+id is re-checked against the live chart of accounts first, so a hallucinated id
+is skipped and reported rather than posted.
+
+**Extra scope required** beyond §3b — the refresh token needs Books banking
+writes (`ZohoBooks.banking.CREATE` and `ZohoBooks.banking.UPDATE`, or
+`ZohoBooks.fullaccess.all`). Without them the reconcile still runs and proposes,
+and only the approval step fails, naming the missing scope.
+
 ## 3c. Scheduled remittance sweep
 
 `vercel.json` runs `/api/cron/remittance-sweep` every **Monday** at 11:00 UTC

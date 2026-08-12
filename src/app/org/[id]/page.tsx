@@ -15,6 +15,7 @@ import Link from "next/link";
 import { dispatchInBackground } from "@/lib/client/dispatch";
 import { getPersonaByAgentId } from "@/lib/personas";
 import GenericAgentChat from "@/components/generic-agent-chat";
+import BankStatementUpload from "@/components/bank-statement-upload";
 
 // These three have richer dedicated chats on their legacy console
 // (/dashboard/[id]) — the generic org chat stays out of their way.
@@ -211,6 +212,15 @@ export default function EmployeePage() {
           />
           <VoicePicker agentId={id} firstName={firstNameOf(employee.name)} />
         </>
+      )}
+
+      {/* Bank reconciliation — the finance team's file intake. */}
+      {employee.staffed && employee.departmentId === "finance" && (
+        <BankStatementUpload
+          employeeId={id}
+          employeeName={employee.name}
+          onDone={load}
+        />
       )}
 
       {/* Direct assign form + (boss) dispatch */}

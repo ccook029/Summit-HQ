@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       deliverableType?: string;
       createdBy?: string;
       run?: boolean;
+      attachments?: { name?: string; text?: string }[];
     };
 
     if (!body.assigneeId || !body.title?.trim() || !body.brief?.trim()) {
@@ -74,6 +75,14 @@ export async function POST(request: NextRequest) {
       brief: body.brief,
       deliverableType: body.deliverableType,
       createdBy: body.createdBy,
+      attachments: (body.attachments ?? [])
+        .map((a) => ({
+          name: String(a.name ?? "attachment").slice(0, 120),
+          // KV holds the whole order, so a pasted statement is capped well
+          // below the value limit; the UI warns before it truncates.
+          text: String(a.text ?? "").slice(0, 400_000),
+        }))
+        .filter((a) => a.text.trim().length > 0),
     });
 
     if (body.run) {

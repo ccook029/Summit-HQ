@@ -6,7 +6,7 @@
 // engine (org/engine.ts) drives the actual Claude calls.
 // ---------------------------------------------------------------------------
 import { kv } from "@vercel/kv";
-import type { WorkOrder, WorkOrderStatus } from "./types";
+import type { OrderAttachment, WorkOrder, WorkOrderStatus } from "./types";
 
 const KEY = "org-work-orders";
 const MAX_WORK_ORDERS = 400;
@@ -41,6 +41,7 @@ export async function createWorkOrder(input: {
   brief: string;
   deliverableType?: string;
   createdBy?: string;
+  attachments?: OrderAttachment[];
 }): Promise<WorkOrder> {
   const now = new Date().toISOString();
   const order: WorkOrder = {
@@ -54,6 +55,7 @@ export async function createWorkOrder(input: {
     createdBy: input.createdBy ?? "Chris Cook",
     createdAt: now,
     updatedAt: now,
+    ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     rounds: [],
     reviews: [],
     escalationIds: [],

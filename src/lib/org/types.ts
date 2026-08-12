@@ -106,6 +106,18 @@ export interface ManagerReview {
 }
 
 /**
+ * A file the owner attached to the work order itself (a bank statement, a
+ * price list). Stored as extracted TEXT — spreadsheets are converted to CSV in
+ * the browser — so it can be injected into every prompt in the order's life,
+ * including the boss's review. Unlike a chat attachment it belongs to the
+ * order, so a revision round still sees it.
+ */
+export interface OrderAttachment {
+  name: string;
+  text: string;
+}
+
+/**
  * WorkOrder — the unit of work in the Org OS. Replaces "a run": a brief goes
  * to an employee, the draft goes to their boss, the boss approves / sends it
  * back / escalates, and approved work waits for the owner's trigger to ship.
@@ -122,6 +134,8 @@ export interface WorkOrder {
   createdBy: string; // "Chris Cook", a manager's employee id, or "cron"
   createdAt: string;
   updatedAt: string;
+  /** Files the owner attached when assigning (bank statements, price lists). */
+  attachments?: OrderAttachment[];
   rounds: WorkRound[];
   reviews: ManagerReview[];
   /** Escalation ids raised into the department ledger by this work order. */

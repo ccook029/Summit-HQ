@@ -72,6 +72,7 @@ You are the numbers gate. A draft FAILS your review if ANY of these are true:
 - An anomaly is papered over instead of flagged — a duplicate, an uncategorized run of transactions, a balance that doesn't reconcile.
 - Confidence tags are missing where the data is thin, or "Certain" is claimed on a guess.
 - It hands the work back to the owner ("Chris should look into…") instead of finishing it or raising ONE precise decision request.
+- A \`bank\` block entry uses an account id that isn't in the grounding tables, has the direction backwards (money in tagged "out"), duplicates a row that the "Already in Books" table shows is already recorded, or posts to a vague catch-all account when a specific one exists. Approving a bank block means those transactions WILL be created and categorized in Zoho Books on the owner's approval — check the totals reconcile before you approve.
 - A \`payment\` block entry lacks evidence (the email that says it was paid), does not agree on payer AND amount with an open invoice, or the amount does not match the invoice balance without an explanation. Approving a payment block means those payments WILL be recorded in Zoho Books on the owner's approval — treat every entry as real money.
 Resolve the worker's decision requests yourself from policy and accounting judgment wherever you can. Escalate to Chris ONLY genuinely owner-level calls: real money movement, tax treatment, a policy that doesn't exist yet. Approve when it meets YOUR bar — don't rubber-stamp, and don't escalate just to be safe. When you send it back, name the exact lines to fix.`,
     deliverableGuidance: `When dispatching: one work order per concrete job ("Categorize this month's uncategorized transactions", "Reconcile account X", "Cash outlook for the next 8 weeks"). Name the accounts and periods.`,
@@ -92,7 +93,25 @@ Compare the LIKELY REMITTANCE EMAILS in your grounding against the OPEN INVOICES
   { "invoice_number": "INV-00123", "customer": "Midland Carriers", "amount": 4500.00, "date": "2026-08-10", "payment_mode": "banktransfer", "reference": "e-transfer ref or email subject", "evidence": "one line: which email says this was paid" }
 ]
 \`\`\`
-Only include matches you would stake your job on — a wrong payment recorded in the books is the worst error this department can make. Uncertain match? Put it in prose with your reasoning, NOT in the payment block. ${DECISION_PROTOCOL}`,
+Only include matches you would stake your job on — a wrong payment recorded in the books is the worst error this department can make. Uncertain match? Put it in prose with your reasoning, NOT in the payment block.
+
+BANK RECONCILIATION (when a statement or transaction spreadsheet is attached to the work order):
+Your grounding then carries the live bank accounts, everything Books ALREADY has over the statement's window, and the accounts you may categorize to — all with their real Zoho ids. Work EVERY row of the attached file:
+1. MATCH each statement row against the "Already in Books" table on date (± a few days for posting lag) and amount. Matched rows are done — do not touch them.
+2. MISSING rows — on the statement, absent from Books — go in the \`create\` list with the account you'd post them to.
+3. UNCATEGORIZED lines already in Books go in the \`categorize\` list with their transaction_id.
+Emit ONE fenced block tagged \`bank\` (never \`json\`):
+\`\`\`bank
+{
+  "create": [
+    { "direction": "out", "bank_account_id": "4600000000001234", "category_account_id": "4600000000005678", "date": "2026-03-14", "amount": 812.44, "description": "Petro-Canada fuel", "reference": "statement row 41" }
+  ],
+  "categorize": [
+    { "transaction_id": "4600000000009999", "direction": "in", "bank_account_id": "4600000000001234", "category_account_id": "4600000000004321", "date": "2026-03-02", "amount": 2712.00, "description": "Future Transfer e-transfer" }
+  ]
+}
+\`\`\`
+Rules that do not bend: "direction" is "in" for money into the bank account, "out" for money leaving it. Every id must be COPIED from the tables in your grounding — never invented, never a name where an id belongs. Amounts are positive numbers; the direction carries the sign. If you cannot confidently pick an account for a row, LEAVE IT OUT of the block and list it in prose as needing Chris's call — an unclassified row costs a question, a misclassified one costs a corrected return. Always state your totals: rows on the statement, matched, created, categorized, left out. ${DECISION_PROTOCOL}`,
     deliverableGuidance: `Lead with what needs action (uncategorized items first, then anomalies). Use a clean table: transaction · date · amount · proposed account · reasoning · confidence. Flag anything that looks like a duplicate or a personal expense rather than silently categorizing it. Recurring vendors you've seen categorized before follow the same treatment — note when you're applying a precedent.`,
   },
 

@@ -308,6 +308,35 @@ export async function fetchUncategorizedBankTxns(
   return { items, total };
 }
 
+/**
+ * Every bank feed line on an account within a date window, ANY status. This is
+ * what a statement gets compared against: "is this row already in Books?"
+ * cannot be answered from the uncategorized feed alone, because a row that was
+ * already categorized or matched is still present in Books.
+ */
+export async function fetchBankTxnsInRange(opts: {
+  accountId: string;
+  from: string; // YYYY-MM-DD
+  to: string; // YYYY-MM-DD
+  maxPages?: number;
+}): Promise<{ items: BooksBankTxn[]; complete: boolean }> {
+  const items: BooksBankTxn[] = [];
+  const maxPages = opts.maxPages ?? 10;
+  for (let page = 1; page <= maxPages; page++) {
+    const res = await booksGet<Record<string, unknown>>("/banktransactions", {
+      account_id: opts.accountId,
+      date_start: opts.from,
+      date_end: opts.to,
+      page: String(page),
+      per_page: "200",
+    });
+    items.push(...((res.banktransactions as BooksBankTxn[]) ?? []));
+    const ctx = res.page_context as { has_more_page?: boolean } | undefined;
+    if (!ctx?.has_more_page) return { items, complete: true };
+  }
+  return { items, complete: false };
+}
+
 export const fetchOpenInvoices = () =>
   getAllPages<BooksInvoice>("/invoices", "invoices", { status: "unpaid" });
 
@@ -423,6 +452,52 @@ export async function categorizeTxnAsDeposit(
     amount: opts.amount,
     description: opts.description ?? "",
   });
+}
+
+/**
+ * Create a bank transaction that never made it into Books — the missing rows
+ * from a statement when the bank feed was down. Owner-gated: only the ship
+ * executor calls this.
+ *
+ * `transaction_type` is "deposit" (money in) or "expense" (money out).
+ * For a deposit, account_id is the bank account and from_account_id the income
+ * (or other) account. For an expense, account_id is the EXPENSE account and
+ * paid_through_account_id the bank account. Requires a Books write scope.
+ */
+export async function createBankTxn(opts: {
+  direction: "in" | "out";
+  bankAccountId: string;
+  categoryAccountId: string;
+  date: string; // YYYY-MM-DD
+  amount: number;
+  description?: string;
+  referenceNumber?: string;
+  branchId?: string;
+}): Promise<string | null> {
+  const common = {
+    date: opts.date,
+    amount: opts.amount,
+    description: (opts.description ?? "").slice(0, 500),
+    reference_number: opts.referenceNumber ?? "",
+    ...(opts.branchId ? { branch_id: opts.branchId } : {}),
+  };
+  const body =
+    opts.direction === "in"
+      ? {
+          transaction_type: "deposit",
+          account_id: opts.bankAccountId,
+          from_account_id: opts.categoryAccountId,
+          ...common,
+        }
+      : {
+          transaction_type: "expense",
+          account_id: opts.categoryAccountId,
+          paid_through_account_id: opts.bankAccountId,
+          ...common,
+        };
+  const res = await booksPost<Record<string, unknown>>("/banktransactions", body);
+  const txn = res.banktransaction as { transaction_id?: string } | undefined;
+  return txn?.transaction_id ?? null;
 }
 
 /** Reverse a categorization — returns the feed line to Uncategorized. */
@@ -543,6 +618,111 @@ export async function recordCustomerPayment(opts: {
     invoices: [{ invoice_id: opts.invoice_id, amount_applied: opts.amount }],
     ...(opts.branch_id ? { branch_id: opts.branch_id } : {}),
   });
+}
+
+// ---- Bank reconciliation grounding (read-only) ----------------------------
+
+/**
+ * Everything an employee needs to reconcile a bank statement against Books:
+ * the bank accounts with their ids, every feed line already in Books over the
+ * statement's window, and the accounts available to categorize to.
+ *
+ * The ids matter as much as the numbers — a proposal has to name the exact
+ * Zoho account_id, otherwise the ship executor has nothing to post against.
+ */
+export async function renderBankReconContext(opts: {
+  from: string;
+  to: string;
+  maxRows?: number;
+}): Promise<string> {
+  const maxRows = opts.maxRows ?? 600;
+  const lines: string[] = [
+    "## Bank reconciliation data (live from Zoho Books, read-only)",
+    `Window: ${opts.from} → ${opts.to}`,
+    "",
+  ];
+
+  const accounts = await fetchBankAccounts().catch(() => [] as BooksBankAccount[]);
+  if (accounts.length === 0) {
+    lines.push(
+      "No bank accounts could be read from Books. Do NOT propose creating anything — say the feed is unreachable."
+    );
+    return lines.join("\n");
+  }
+
+  lines.push("### Bank accounts — use these exact ids");
+  lines.push("| account_id | Name | Type |");
+  lines.push("|---|---|---|");
+  for (const a of accounts) {
+    lines.push(`| ${a.account_id} | ${a.account_name} | ${a.account_type} |`);
+  }
+  lines.push("");
+
+  // Everything Books already has over the window. A statement row that
+  // matches one of these on date + amount is ALREADY RECORDED.
+  let shown = 0;
+  let truncated = false;
+  const body: string[] = [];
+  for (const acct of accounts) {
+    const res = await fetchBankTxnsInRange({
+      accountId: acct.account_id,
+      from: opts.from,
+      to: opts.to,
+    }).catch(() => null);
+    if (!res) continue;
+    if (!res.complete) truncated = true;
+    for (const t of res.items) {
+      if (shown >= maxRows) {
+        truncated = true;
+        break;
+      }
+      const dir = txnDirection(t);
+      body.push(
+        `| ${t.date} | ${acct.account_name} | ${dir === "in" ? "+" : dir === "out" ? "−" : "?"}$${Math.abs(t.amount ?? 0).toFixed(2)} | ${(t.payee ?? "").slice(0, 40)} | ${(t.description ?? "").slice(0, 60)} | ${t.status} | ${t.transaction_id} |`
+      );
+      shown++;
+    }
+  }
+
+  lines.push(
+    `### Already in Books over this window — ${shown} line${shown === 1 ? "" : "s"}${truncated ? " (TRUNCATED — say so; do not treat the tail as missing)" : ""}`
+  );
+  if (shown === 0) {
+    lines.push(
+      "Books has NO bank lines in this window. Either the feed never ran, or the window is wrong — flag it before proposing hundreds of creates."
+    );
+  } else {
+    lines.push(
+      "A statement row matching one of these on DATE + AMOUNT (± a day for posting lag) is already recorded. Do not re-create it."
+    );
+    lines.push("| Date | Account | Amount | Payee | Description | Status | transaction_id |");
+    lines.push("|---|---|---|---|---|---|---|");
+    lines.push(...body);
+  }
+  lines.push("");
+
+  // The categories available. Bank/CC accounts are excluded — categorizing to
+  // one of those is a transfer, which is a different call.
+  const coa = await fetchChartOfAccounts().catch(() => [] as BooksAccount[]);
+  const usable = coa.filter(
+    (a) =>
+      a.is_active &&
+      !["bank", "credit_card"].includes((a.account_type ?? "").toLowerCase())
+  );
+  if (usable.length > 0) {
+    lines.push(`### Accounts you may categorize to — use these exact ids (${usable.length})`);
+    lines.push("| account_id | Name | Type |");
+    lines.push("|---|---|---|");
+    for (const a of usable.slice(0, 300)) {
+      lines.push(`| ${a.account_id} | ${a.account_name} | ${a.account_type} |`);
+    }
+    lines.push("");
+    lines.push(
+      "NEVER invent an account_id or an account name. If nothing fits a transaction, leave it out and list it as needing a decision."
+    );
+  }
+
+  return lines.join("\n");
 }
 
 // ---- Books health snapshot (read-only) ------------------------------------

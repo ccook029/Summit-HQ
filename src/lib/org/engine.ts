@@ -22,6 +22,7 @@ import { getRemittanceAttachments } from "../zoho-mail";
 import {
   fetchAllOpenInvoices,
   matchOpenCustomersInText,
+  renderBankReconContext,
   renderCustomerArLedger,
 } from "../zoho-books";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "../models";
@@ -47,6 +48,7 @@ import {
   getEmployeeProfile,
 } from "./employee-configs";
 import { renderDepartmentContext } from "./department-context";
+import { sniffDateRange } from "./date-range";
 import { executeShip } from "./ship-executors";
 import { isAutoShipEnabled } from "./settings";
 import type {
@@ -136,6 +138,15 @@ function stripJsonBlock(text: string): string {
   if (matches.length === 0) return text.trim();
   const last = matches[matches.length - 1][0];
   return text.replace(last, "").trim();
+}
+
+/** Attached files, rendered for prompt injection. */
+function renderOrderAttachments(order: WorkOrder): string {
+  if (!order.attachments?.length) return "";
+  const blocks = order.attachments
+    .map((a) => `### File: ${a.name}\n\`\`\`\n${a.text}\n\`\`\``)
+    .join("\n\n");
+  return `\n\n## Files attached to this work order by ${order.createdBy}\nThese are the source of truth for what the owner is asking about — work every row, not a sample.\n\n${blocks}`;
 }
 
 // ---- Prompt assembly ---------------------------------------------------------
@@ -319,13 +330,35 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
   try {
     const workerSystem = await buildWorkerSystemPrompt(employee, department);
     let policyBlock = await renderPolicyBlock(department.id, department.name);
+    // Owner-attached files belong to the order, so every round — and the
+    // boss's review — sees the same source data.
+    policyBlock += renderOrderAttachments(order);
 
     // Finance orders carry the remittance attachments: PDFs as native
     // documents, spreadsheets/CSVs as text — the same evidence in front of
     // BOTH the worker and the reviewing boss.
     let attachmentDocs: { name: string; data: string }[] = [];
     let attachmentImages: { mediaType: string; data: string }[] = [];
-    if (department.id === "finance") {
+    // A bank reconciliation works from the attached statement against live
+    // Books data — it has nothing to do with the mailbox, so it skips the
+    // remittance pull entirely (which would otherwise burn the whole context).
+    const isBankRecon = order.deliverableType === "bank-reconcile";
+    if (department.id === "finance" && isBankRecon) {
+      const statementText = (order.attachments ?? []).map((a) => a.text).join("\n");
+      const range = sniffDateRange(statementText);
+      if (!range) {
+        policyBlock +=
+          "\n\n## Bank reconciliation\nNo usable dates could be read from the attached file, so live Books data was NOT fetched. Say exactly that and ask for a statement with a date column — do not guess at what Books contains.";
+      } else {
+        const ctx = await renderBankReconContext(range).catch(
+          (err) =>
+            `\n\n## Bank reconciliation\nZoho Books could not be read (${
+              err instanceof Error ? err.message : "unknown error"
+            }). Do not propose any creates or categorizations.`
+        );
+        policyBlock += `\n\n${ctx}`;
+      }
+    } else if (department.id === "finance") {
       // skipProcessed: each sweep advances through the backlog instead of
       // re-reading the newest mail every time.
       // Focus the sweep on mail that could actually clear something: the
