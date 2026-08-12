@@ -645,6 +645,28 @@ function InFlightCard({
   const action =
     order.status === "in_progress" || order.status === "in_review" ? "resume" : "run";
 
+  /** Stop an order for good — the counterpart to Resume when you don't want
+   * the work at all. */
+  const cancel = async () => {
+    if (!confirm(`Cancel "${order.title}"? It stops here and won't run again.`)) return;
+    setBusy(true);
+    setNote("Cancelling…");
+    try {
+      const res = await fetch(`/api/org/work-orders/${order.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", notes: "Cancelled by Chris." }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setNote(res.ok ? "Cancelled." : (data.error ?? "Couldn't cancel."));
+      await onDone();
+    } catch {
+      setNote("Cancel failed — try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const resume = async () => {
     setBusy(true);
     setNote("Resuming…");
@@ -682,6 +704,13 @@ function InFlightCard({
             className="rounded-md border border-sky/60 bg-white px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:bg-sky/20 disabled:opacity-50"
           >
             {busy ? "Resuming…" : "Resume"}
+          </button>
+          <button
+            onClick={cancel}
+            disabled={busy}
+            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:border-red-300 hover:text-red-600 disabled:opacity-50"
+          >
+            Cancel
           </button>
         </div>
       </div>

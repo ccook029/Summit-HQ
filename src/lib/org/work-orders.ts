@@ -16,8 +16,10 @@ const ALLOWED: Record<WorkOrderStatus, WorkOrderStatus[]> = {
   queued: ["in_progress", "rejected"],
   // "queued" on the two live states is the resume path: a run killed by the
   // serverless ceiling leaves the order here with nobody driving it.
-  in_progress: ["in_review", "approved", "escalated", "error", "queued"],
-  in_review: ["revision", "approved", "escalated", "error", "queued"],
+  // "rejected" is the owner's cancel — available from every live state, since
+  // a stalled order is exactly the one you're most likely to want gone.
+  in_progress: ["in_review", "approved", "escalated", "error", "queued", "rejected"],
+  in_review: ["revision", "approved", "escalated", "error", "queued", "rejected"],
   revision: ["in_progress", "rejected"],
   approved: ["shipped", "revision", "rejected"],
   escalated: ["revision", "approved", "rejected"],

@@ -278,14 +278,14 @@ function BoardCard({
   const action =
     order.status === "in_progress" || order.status === "in_review" ? "resume" : "run";
 
-  const run = async () => {
+  const post = async (body: Record<string, unknown>) => {
     setBusy(true);
     setNote(null);
     try {
       const res = await fetch(`/api/org/work-orders/${order.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(body),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) setNote(d.error ?? `Failed (${res.status})`);
@@ -295,6 +295,22 @@ function BoardCard({
     } finally {
       setBusy(false);
     }
+  };
+
+  const run = () => post({ action });
+
+  // Cancel is final — the order stops where it is and nothing further runs.
+  // Anything already finished has nothing left to cancel.
+  const canCancel = !["shipped", "rejected"].includes(order.status);
+  const cancel = () => {
+    if (
+      !confirm(
+        `Cancel "${order.title}"?\n\nIt stops where it is and won't run again. Nothing that was already approved and shipped is affected.`
+      )
+    ) {
+      return;
+    }
+    void post({ action: "reject", notes: "Cancelled from the work board." });
   };
 
   return (
@@ -363,6 +379,15 @@ function BoardCard({
             className="rounded-full bg-navy px-3 py-0.5 text-[11px] font-semibold text-white transition-colors hover:bg-navy-deep disabled:opacity-40"
           >
             {busy ? "Running (takes a minute)…" : stalled ? "Run it again" : "Run now"}
+          </button>
+        )}
+        {canCancel && (
+          <button
+            onClick={cancel}
+            disabled={busy}
+            className="rounded-full border border-line bg-white px-2.5 py-0.5 text-[11px] text-slate-500 transition-colors hover:border-red-300 hover:text-red-600 disabled:opacity-40"
+          >
+            Cancel
           </button>
         )}
         {note && <span className="text-[11px] text-amber-600">{note}</span>}
