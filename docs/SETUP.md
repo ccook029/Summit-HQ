@@ -77,27 +77,36 @@ future, separately-scoped decision.
 ## 3d. Bank reconciliation (statement → Books)
 
 Any finance employee's page has a **Reconcile bank transactions** panel. Drop
-in a statement export (.xlsx/.csv); the browser normalizes Excel serial dates,
-splits the rows into **one work order per month**, and runs them one at a time
-(a 5,000-row / 4-year export is 56 orders — far past what one prompt or one
-300s run can hold). Each order carries only its own month's rows.
+in a statement export (.xlsx/.csv), name the Books account it belongs to, and
+pick a month range.
 
-For a `bank-reconcile` order the engine skips the remittance mailbox and
-instead grounds the employee in live Books data for that month's window: the
-bank accounts with their ids, every feed line Books already holds (so
-already-recorded rows aren't proposed again), and the chart of accounts. The
-employee returns a ```` ```bank ```` block with `create` (on the statement,
-missing from Books) and `categorize` (in Books, uncategorized) lists.
+**The match runs in code, not in the model.** `src/lib/bank-match.ts` joins the
+statement against the Books feed on amount, direction and date (±3 days),
+one-to-one — so three identical $1.00 fees on the same day need three Books
+lines to be considered recorded, not one. The bookkeeper never sees the matched
+rows; he is handed the counts, the rows missing from Books, the uncategorized
+Books lines, and the chart of accounts, and answers the one question that needs
+judgment: **which account?**
 
-Approving the order in `/review` is what writes: `createBankTxn` for the
-missing rows, `categorizeTxnAsExpense`/`AsDeposit` for the rest. Every account
-id is re-checked against the live chart of accounts first, so a hallucinated id
-is skipped and reported rather than posted.
+Consequently his ```` ```bank ```` block carries no dates or amounts — only
+`row` numbers, `transaction_id`s and `category_account_id`s. Dates, amounts and
+directions come from the file, so he cannot mistype one.
+
+On approval the ship executor **re-runs the whole match against live Books**
+before writing. A row that has since appeared — because the feed caught up, or
+because you approved an overlapping month — is skipped and reported rather than
+duplicated. Account ids are re-checked against the live chart of accounts, and
+a Books line whose direction Zoho never populated is left for a human instead of
+being guessed at.
+
+Scale: the browser splits the file into one work order per month and runs them
+one at a time (a 5,000-row / 4-year export is 56 orders — past what one prompt
+or one 300s run can hold). Excel serial dates are normalized to ISO first.
 
 **Extra scope required** beyond §3b — the refresh token needs Books banking
 writes (`ZohoBooks.banking.CREATE` and `ZohoBooks.banking.UPDATE`, or
-`ZohoBooks.fullaccess.all`). Without them the reconcile still runs and proposes,
-and only the approval step fails, naming the missing scope.
+`ZohoBooks.fullaccess.all`). `/setup/status` probes this directly and shows the
+scopes Zoho reports on the live token.
 
 ## 3c. Scheduled remittance sweep
 

@@ -22,9 +22,9 @@ import { getRemittanceAttachments } from "../zoho-mail";
 import {
   fetchAllOpenInvoices,
   matchOpenCustomersInText,
-  renderBankReconContext,
   renderCustomerArLedger,
 } from "../zoho-books";
+import { reconcileStatement, renderReconciliation } from "../bank-recon";
 import { CLAUDE_MODEL, CLAUDE_MANAGER_MODEL } from "../models";
 import { renderOrgKnowledge } from "../org-knowledge";
 import { renderCrossAgentSignals } from "../cross-agent";
@@ -48,7 +48,6 @@ import {
   getEmployeeProfile,
 } from "./employee-configs";
 import { renderDepartmentContext } from "./department-context";
-import { sniffDateRange } from "./date-range";
 import { executeShip } from "./ship-executors";
 import { isAutoShipEnabled } from "./settings";
 import type {
@@ -331,8 +330,11 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
     const workerSystem = await buildWorkerSystemPrompt(employee, department);
     let policyBlock = await renderPolicyBlock(department.id, department.name);
     // Owner-attached files belong to the order, so every round — and the
-    // boss's review — sees the same source data.
-    policyBlock += renderOrderAttachments(order);
+    // boss's review — sees the same source data. A bank reconciliation is the
+    // exception: its grounding is the finished match, and re-showing the raw
+    // file only tempts the bookkeeper to redo a join that code already did.
+    const isBankRecon = order.deliverableType === "bank-reconcile";
+    if (!isBankRecon) policyBlock += renderOrderAttachments(order);
 
     // Finance orders carry the remittance attachments: PDFs as native
     // documents, spreadsheets/CSVs as text — the same evidence in front of
@@ -342,22 +344,32 @@ export async function runWorkOrder(id: string): Promise<RunWorkOrderResult> {
     // A bank reconciliation works from the attached statement against live
     // Books data — it has nothing to do with the mailbox, so it skips the
     // remittance pull entirely (which would otherwise burn the whole context).
-    const isBankRecon = order.deliverableType === "bank-reconcile";
     if (department.id === "finance" && isBankRecon) {
-      const statementText = (order.attachments ?? []).map((a) => a.text).join("\n");
-      const range = sniffDateRange(statementText);
-      if (!range) {
-        policyBlock +=
-          "\n\n## Bank reconciliation\nNo usable dates could be read from the attached file, so live Books data was NOT fetched. Say exactly that and ask for a statement with a date column — do not guess at what Books contains.";
-      } else {
-        const ctx = await renderBankReconContext(range).catch(
-          (err) =>
-            `\n\n## Bank reconciliation\nZoho Books could not be read (${
-              err instanceof Error ? err.message : "unknown error"
-            }). Do not propose any creates or categorizations.`
-        );
-        policyBlock += `\n\n${ctx}`;
-      }
+      // The match itself runs in code — the bookkeeper is handed the result,
+      // not the raw haystack, and only has to choose accounts.
+      const statementCsv = (order.attachments ?? []).map((a) => a.text).join("\n");
+      const recon = await reconcileStatement(
+        statementCsv,
+        order.context?.bankAccountId
+      ).catch((err) => {
+        const message = err instanceof Error ? err.message : "unknown error";
+        return {
+          result: {
+            rows: [],
+            matched: [],
+            missing: [],
+            booksOnly: [],
+            uncategorized: [],
+            unparsed: 0,
+          },
+          bankAccount: null,
+          accountNote: `Zoho Books could not be read (${message}).`,
+          accounts: [],
+          window: null,
+          error: "books-unreachable",
+        } satisfies Awaited<ReturnType<typeof reconcileStatement>>;
+      });
+      policyBlock += `\n\n${renderReconciliation(recon)}`;
     } else if (department.id === "finance") {
       // skipProcessed: each sweep advances through the backlog instead of
       // re-reading the newest mail every time.

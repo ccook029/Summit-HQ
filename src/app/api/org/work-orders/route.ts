@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       createdBy?: string;
       run?: boolean;
       attachments?: { name?: string; text?: string }[];
+      context?: Record<string, string>;
     };
 
     if (!body.assigneeId || !body.title?.trim() || !body.brief?.trim()) {
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
           text: String(a.text ?? "").slice(0, 400_000),
         }))
         .filter((a) => a.text.trim().length > 0),
+      context: body.context,
     });
 
     if (body.run) {

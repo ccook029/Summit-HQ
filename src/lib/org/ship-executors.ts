@@ -21,12 +21,11 @@ import {
   categorizeTxnAsDeposit,
   categorizeTxnAsExpense,
   createBankTxn,
-  fetchBankAccounts,
-  fetchChartOfAccounts,
   findInvoiceByNumber,
   recordCustomerPayment,
   resolveSummitLocation,
 } from "../zoho-books";
+import { reconcileStatement } from "../bank-recon";
 
 interface PaymentItem {
   invoiceNumber: string;
@@ -69,37 +68,28 @@ export function parsePaymentPackage(text: string): PaymentItem[] {
 }
 
 // ---- Bank reconciliation package -------------------------------------------
+//
+// The bookkeeper never restates a date or an amount. He refers to a statement
+// row by its `row` number and a Books line by its `transaction_id`, and
+// supplies the one thing that is his to decide: the account. Everything else
+// comes from re-running the deterministic match at approval time — so what is
+// written matches Books as it stands NOW, not as it stood when he drafted.
 
-interface BankCreate {
-  direction: "in" | "out";
-  bankAccountId: string;
+interface BankCreateChoice {
+  row: number;
   categoryAccountId: string;
-  date: string;
-  amount: number;
-  description?: string;
-  reference?: string;
+  note?: string;
 }
-interface BankCategorize {
+interface BankCategorizeChoice {
   transactionId: string;
-  direction: "in" | "out";
-  bankAccountId: string;
   categoryAccountId: string;
-  date: string;
-  amount: number;
-  description?: string;
+  note?: string;
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Parse the LAST ```bank fenced block: rows the statement had but Books
- * didn't (`create`), and feed lines sitting uncategorized (`categorize`).
- * Anything missing an id, a positive amount, or a real date is dropped here
- * rather than sent to Zoho as a malformed write.
- */
+/** Parse the LAST ```bank fenced block. */
 export function parseBankPackage(text: string): {
-  create: BankCreate[];
-  categorize: BankCategorize[];
+  create: BankCreateChoice[];
+  categorize: BankCategorizeChoice[];
 } {
   const matches = [...text.matchAll(/```bank\s*([\s\S]*?)```/gi)];
   if (matches.length === 0) return { create: [], categorize: [] };
@@ -108,74 +98,27 @@ export function parseBankPackage(text: string): {
       string,
       unknown
     >;
-    const dir = (v: unknown): "in" | "out" | null =>
-      v === "in" || v === "out" ? v : null;
     const str = (v: unknown) => String(v ?? "").trim();
 
-    /** Shared shape check — a row missing any of this can't be posted. */
-    const usable = (
-      direction: "in" | "out" | null,
-      bankAccountId: string,
-      categoryAccountId: string,
-      date: string,
-      amount: number
-    ): direction is "in" | "out" =>
-      direction !== null &&
-      bankAccountId.length > 0 &&
-      categoryAccountId.length > 0 &&
-      ISO_DATE.test(date) &&
-      Number.isFinite(amount) &&
-      amount > 0;
-
-    const create = (Array.isArray(parsed.create) ? parsed.create : []).flatMap<BankCreate>(
+    const create = (Array.isArray(parsed.create) ? parsed.create : []).flatMap<BankCreateChoice>(
       (r) => {
         const i = r as Record<string, unknown>;
-        const direction = dir(i.direction);
-        const bankAccountId = str(i.bank_account_id);
+        const row = Number(i.row);
         const categoryAccountId = str(i.category_account_id);
-        const date = str(i.date);
-        const amount = Number(i.amount ?? 0);
-        if (!usable(direction, bankAccountId, categoryAccountId, date, amount)) return [];
-        return [
-          {
-            direction,
-            bankAccountId,
-            categoryAccountId,
-            date,
-            amount,
-            description: i.description ? String(i.description) : undefined,
-            reference: i.reference ? String(i.reference) : undefined,
-          },
-        ];
+        if (!Number.isInteger(row) || row < 0 || !categoryAccountId) return [];
+        return [{ row, categoryAccountId, note: i.note ? String(i.note) : undefined }];
       }
     );
 
     const categorize = (
       Array.isArray(parsed.categorize) ? parsed.categorize : []
-    ).flatMap<BankCategorize>((r) => {
+    ).flatMap<BankCategorizeChoice>((r) => {
       const i = r as Record<string, unknown>;
       const transactionId = str(i.transaction_id);
-      const direction = dir(i.direction);
-      const bankAccountId = str(i.bank_account_id);
       const categoryAccountId = str(i.category_account_id);
-      const date = str(i.date);
-      const amount = Number(i.amount ?? 0);
-      if (
-        transactionId.length === 0 ||
-        !usable(direction, bankAccountId, categoryAccountId, date, amount)
-      ) {
-        return [];
-      }
+      if (!transactionId || !categoryAccountId) return [];
       return [
-        {
-          transactionId,
-          direction,
-          bankAccountId,
-          categoryAccountId,
-          date,
-          amount,
-          description: i.description ? String(i.description) : undefined,
-        },
+        { transactionId, categoryAccountId, note: i.note ? String(i.note) : undefined },
       ];
     });
 
@@ -186,91 +129,117 @@ export function parseBankPackage(text: string): {
 }
 
 /**
- * Apply an approved bank package. Every account id is checked against the live
- * chart of accounts first, so a hallucinated id fails here instead of creating
- * a wrong entry in the books.
+ * Apply an approved reconciliation. The statement is re-matched against live
+ * Books first, so a row that has since appeared in Books — because the feed
+ * caught up, or because you approved an overlapping month — is skipped rather
+ * than duplicated.
  */
 async function shipBankPackage(
+  order: WorkOrder,
   pkg: ReturnType<typeof parseBankPackage>
 ): Promise<string[]> {
-  const [bankAccounts, coa] = await Promise.all([
-    fetchBankAccounts().catch(() => []),
-    fetchChartOfAccounts().catch(() => []),
-  ]);
-  const bankIds = new Set(bankAccounts.map((a) => a.account_id));
-  const coaIds = new Set(coa.map((a) => a.account_id));
+  const csv = (order.attachments ?? []).map((a) => a.text).join("\n");
+  if (!csv.trim()) return ["no statement attached to this order — nothing applied"];
+
+  const recon = await reconcileStatement(csv, order.context?.bankAccountId);
+  if (recon.error || !recon.bankAccount) {
+    return [`nothing applied — ${recon.accountNote}`];
+  }
+
+  const bankAccountId = recon.bankAccount.id;
+  const stillMissing = new Map(recon.result.missing.map((r) => [r.index, r]));
+  const stillUncategorized = new Map(
+    recon.result.uncategorized.map((l) => [l.transactionId, l])
+  );
+  const coaIds = new Set(recon.accounts.map((a) => a.account_id));
   const location = await resolveSummitLocation().catch(() => null);
 
   const created: string[] = [];
   const categorized: string[] = [];
   const skipped: string[] = [];
 
-  const validIds = (bankId: string, catId: string, label: string): boolean => {
-    if (bankIds.size > 0 && !bankIds.has(bankId)) {
-      skipped.push(`${label}: unknown bank account ${bankId}`);
-      return false;
+  for (const choice of pkg.create) {
+    const row = stillMissing.get(choice.row);
+    if (!row) {
+      skipped.push(`row ${choice.row}: already in Books now, or not in the missing list`);
+      continue;
     }
-    if (coaIds.size > 0 && !coaIds.has(catId) && !bankIds.has(catId)) {
-      skipped.push(`${label}: unknown category account ${catId}`);
-      return false;
+    if (coaIds.size > 0 && !coaIds.has(choice.categoryAccountId)) {
+      skipped.push(`row ${choice.row}: unknown account ${choice.categoryAccountId}`);
+      continue;
     }
-    return true;
-  };
-
-  for (const c of pkg.create) {
-    const label = `${c.date} $${c.amount.toFixed(2)}`;
-    if (!validIds(c.bankAccountId, c.categoryAccountId, label)) continue;
     try {
       await createBankTxn({
-        direction: c.direction,
-        bankAccountId: c.bankAccountId,
-        categoryAccountId: c.categoryAccountId,
-        date: c.date,
-        amount: c.amount,
-        description: c.description,
-        referenceNumber: c.reference,
+        direction: row.direction,
+        bankAccountId,
+        categoryAccountId: choice.categoryAccountId,
+        date: row.date,
+        amount: row.amount,
+        description: row.description,
+        referenceNumber: choice.note,
         branchId: location?.id,
       });
-      created.push(`${label} ${c.description?.slice(0, 40) ?? ""}`.trim());
+      created.push(`${row.date} $${row.amount.toFixed(2)}`);
     } catch (err) {
-      skipped.push(`${label}: ${err instanceof Error ? err.message.slice(0, 120) : "failed"}`);
+      skipped.push(
+        `row ${choice.row}: ${err instanceof Error ? err.message.slice(0, 120) : "failed"}`
+      );
     }
   }
 
-  for (const c of pkg.categorize) {
-    const label = `${c.date} $${c.amount.toFixed(2)}`;
-    if (!validIds(c.bankAccountId, c.categoryAccountId, label)) continue;
+  for (const choice of pkg.categorize) {
+    const line = stillUncategorized.get(choice.transactionId);
+    if (!line) {
+      skipped.push(`${choice.transactionId}: no longer uncategorized in Books`);
+      continue;
+    }
+    if (coaIds.size > 0 && !coaIds.has(choice.categoryAccountId)) {
+      skipped.push(`${choice.transactionId}: unknown account ${choice.categoryAccountId}`);
+      continue;
+    }
+    // An "unknown" direction is exactly the case where guessing costs a
+    // reversed entry — leave it for a human.
+    if (line.direction === "unknown") {
+      skipped.push(`${choice.transactionId}: Books doesn't say whether it's money in or out`);
+      continue;
+    }
     try {
-      if (c.direction === "out") {
-        await categorizeTxnAsExpense(c.transactionId, {
-          account_id: c.categoryAccountId,
-          paid_through_account_id: c.bankAccountId,
-          date: c.date,
-          amount: c.amount,
-          description: c.description,
+      if (line.direction === "out") {
+        await categorizeTxnAsExpense(line.transactionId, {
+          account_id: choice.categoryAccountId,
+          paid_through_account_id: bankAccountId,
+          date: line.date,
+          amount: line.amount,
+          description: line.description,
         });
       } else {
-        await categorizeTxnAsDeposit(c.transactionId, {
-          from_account_id: c.categoryAccountId,
-          to_account_id: c.bankAccountId,
-          date: c.date,
-          amount: c.amount,
-          description: c.description,
+        await categorizeTxnAsDeposit(line.transactionId, {
+          from_account_id: choice.categoryAccountId,
+          to_account_id: bankAccountId,
+          date: line.date,
+          amount: line.amount,
+          description: line.description,
         });
       }
-      categorized.push(label);
+      categorized.push(`${line.date} $${line.amount.toFixed(2)}`);
     } catch (err) {
-      skipped.push(`${label}: ${err instanceof Error ? err.message.slice(0, 120) : "failed"}`);
+      skipped.push(
+        `${choice.transactionId}: ${err instanceof Error ? err.message.slice(0, 120) : "failed"}`
+      );
     }
   }
 
   const parts: string[] = [];
   if (created.length > 0)
-    parts.push(`${created.length} missing bank transaction${created.length === 1 ? "" : "s"} created in Zoho Books`);
+    parts.push(
+      `${created.length} missing transaction${created.length === 1 ? "" : "s"} created in "${recon.bankAccount.name}"`
+    );
   if (categorized.length > 0)
     parts.push(`${categorized.length} transaction${categorized.length === 1 ? "" : "s"} categorized`);
   if (skipped.length > 0)
-    parts.push(`${skipped.length} skipped — ${skipped.slice(0, 10).join("; ")}${skipped.length > 10 ? `; +${skipped.length - 10} more` : ""}`);
+    parts.push(
+      `${skipped.length} skipped — ${skipped.slice(0, 8).join("; ")}${skipped.length > 8 ? `; +${skipped.length - 8} more` : ""}`
+    );
   return parts;
 }
 
@@ -283,7 +252,7 @@ async function shipFinanceOrder(order: WorkOrder): Promise<string | null> {
   const bank = parseBankPackage(draft);
   const bankNotes =
     bank.create.length + bank.categorize.length > 0
-      ? await shipBankPackage(bank)
+      ? await shipBankPackage(order, bank)
       : [];
 
   const items = parsePaymentPackage(draft);

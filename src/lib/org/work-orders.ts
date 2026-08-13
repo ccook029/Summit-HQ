@@ -44,6 +44,7 @@ export async function createWorkOrder(input: {
   deliverableType?: string;
   createdBy?: string;
   attachments?: OrderAttachment[];
+  context?: Record<string, string>;
 }): Promise<WorkOrder> {
   const now = new Date().toISOString();
   const order: WorkOrder = {
@@ -58,6 +59,9 @@ export async function createWorkOrder(input: {
     createdAt: now,
     updatedAt: now,
     ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+    ...(input.context && Object.keys(input.context).length
+      ? { context: input.context }
+      : {}),
     rounds: [],
     reviews: [],
     escalationIds: [],

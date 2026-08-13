@@ -19,7 +19,7 @@
 // below — one HTTP request per month, so no single request can time out. Close
 // the tab and the rest are still queued on the work board with Run buttons.
 // ---------------------------------------------------------------------------
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 /** Comfortably inside both the KV value limit and a sane prompt size. */
@@ -200,6 +200,12 @@ async function parseWorkbook(file: File): Promise<ParsedFile> {
   return { name: file.name, sheet: sheetName, chunks, totalRows, undated };
 }
 
+interface BankAccountOption {
+  account_id: string;
+  account_name: string;
+  account_type: string;
+}
+
 type Phase = "idle" | "creating" | "running" | "done";
 
 export default function BankStatementUpload({
@@ -215,6 +221,8 @@ export default function BankStatementUpload({
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [notes, setNotes] = useState("");
+  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
+  const [bankAccountId, setBankAccountId] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState<{ done: number; total: number; label: string }>({
     done: 0,
@@ -225,6 +233,20 @@ export default function BankStatementUpload({
   const [error, setError] = useState<string | null>(null);
   const cancelled = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Which Books account this statement belongs to. Naming it up front beats
+  // inferring it later: a file whose rows are ALL missing from Books gives the
+  // matcher nothing to infer from, which is exactly the backfill case.
+  useEffect(() => {
+    fetch("/api/org/bank-accounts")
+      .then((r) => r.json())
+      .then((d) => {
+        const list: BankAccountOption[] = d.accounts ?? [];
+        setBankAccounts(list);
+        if (list.length === 1) setBankAccountId(list[0].account_id);
+      })
+      .catch(() => {});
+  }, []);
 
   const selected = useMemo(() => {
     if (!parsed) return [];
@@ -292,6 +314,7 @@ export default function BankStatementUpload({
             deliverableType: "bank-reconcile",
             brief: briefFor(chunk, i, selected.length),
             attachments: [{ name: `${parsed.name} (${chunk.period})`, text: chunk.csv }],
+            context: bankAccountId ? { bankAccountId } : undefined,
             run: false,
           }),
         });
@@ -414,6 +437,25 @@ export default function BankStatementUpload({
 
       {parsed && (
         <>
+          {bankAccounts.length > 0 && (
+            <label className="block text-[11px] text-slate-500">
+              Which Zoho Books account is this statement?
+              <select
+                value={bankAccountId}
+                disabled={busy}
+                onChange={(e) => setBankAccountId(e.target.value)}
+                className="ml-2 rounded-md border border-line bg-paper px-2 py-1 text-[11px] text-slate-700 focus:border-sky focus:outline-none"
+              >
+                <option value="">Work it out from the matches</option>
+                {bankAccounts.map((a) => (
+                  <option key={a.account_id} value={a.account_id}>
+                    {a.account_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-[11px] text-slate-500">
               From

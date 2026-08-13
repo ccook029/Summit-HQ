@@ -136,6 +136,12 @@ export interface WorkOrder {
   updatedAt: string;
   /** Files the owner attached when assigning (bank statements, price lists). */
   attachments?: OrderAttachment[];
+  /**
+   * Small structured facts the owner supplied with the order that the engine
+   * needs but prose can't carry reliably — e.g. `bankAccountId`, the Books
+   * account a statement belongs to.
+   */
+  context?: Record<string, string>;
   rounds: WorkRound[];
   reviews: ManagerReview[];
   /** Escalation ids raised into the department ledger by this work order. */
